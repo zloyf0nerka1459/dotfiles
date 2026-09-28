@@ -1,0 +1,152 @@
+# === 1. Переменные и Цвета ===
+set $mod Mod4
+set $term kitty
+set $browser zen-browser
+set $editor code
+
+# Подгружаем цвета Pywal
+exec_always --no-startup-id xrdb ~/.cache/wal/colors.Xresources
+
+# Дефолтные цвета (на случай, если wal не сработал)
+set_from_resource $bg i3wm.color0 #000000
+set_from_resource $fg i3wm.color15 #ffffff
+set_from_resource $col_focused i3wm.color4 #000000
+
+# === 2. Настройка Дисплеев и Графики ===
+# Геометрия мониторов берётся из Arandr (~/.screenlayout/*.sh),
+# а пост-настройки NVIDIA накладываются через ~/.config/i3/scripts/hardware/monitor.sh.
+
+# === 3. Внешний Вид (Gaps & Borders) ===
+font pango:JetBrainsMono Nerd Font Bold 11
+
+gaps inner 12
+gaps outer 5
+smart_gaps off
+default_border pixel 2
+default_floating_border pixel 2
+hide_edge_borders smart
+
+# Цвета рамок (class, border, backgr, text, indicator, child_border)
+client.focused          $col_focused $col_focused $fg     $col_focused $col_focused
+client.focused_inactive #3a3a3a      #3a3a3a      $fg     #3a3a3a      #3a3a3a
+client.unfocused        #2a2a2a      #2a2a2a      $fg     #2a2a2a      #2a2a2a
+
+# === 4. Управление Окнами (Keybindings) ===
+floating_modifier $mod
+bindsym $mod+F1 exec --no-startup-id ~/.config/i3/scripts/software/show-i3-binds.sh
+bindsym $mod+F10 exec --no-startup-id [ -x ~/.local/bin/discord-cursor ] && ~/.local/bin/discord-cursor
+bindsym $mod+p exec --no-startup-id ~/.config/i3/scripts/software/toggle-picom.sh
+bindsym $mod+Shift+f floating toggle
+bindsym $mod+f fullscreen toggle
+bindsym $mod+Shift+q kill
+
+# Фокус (стрелки)
+bindsym $mod+Left focus left
+bindsym $mod+Down focus down
+bindsym $mod+Up focus up
+bindsym $mod+Right focus right
+
+# Перемещение окон (стрелки)
+bindsym $mod+Shift+Left move left
+bindsym $mod+Shift+Down move down
+bindsym $mod+Shift+Up move up
+bindsym $mod+Shift+Right move right
+
+# === 5. Воркспейсы ===
+# Переключение на столы
+bindsym $mod+1 workspace number 1
+bindsym $mod+2 workspace number 2
+bindsym $mod+3 workspace number 3
+bindsym $mod+4 workspace number 4
+bindsym $mod+5 workspace number 5
+bindsym $mod+6 workspace number 6
+bindsym $mod+7 workspace number 7
+bindsym $mod+8 workspace number 8
+bindsym $mod+9 workspace number 9
+bindsym $mod+0 workspace number 10
+
+# Перенос окон на столы (исправлено и дополнено)
+bindsym $mod+Shift+1 move container to workspace number 1
+bindsym $mod+Shift+2 move container to workspace number 2
+bindsym $mod+Shift+3 move container to workspace number 3
+bindsym $mod+Shift+4 move container to workspace number 4
+bindsym $mod+Shift+5 move container to workspace number 5
+bindsym $mod+Shift+6 move container to workspace number 6
+bindsym $mod+Shift+7 move container to workspace number 7
+bindsym $mod+Shift+8 move container to workspace number 8
+bindsym $mod+Shift+9 move container to workspace number 9
+bindsym $mod+Shift+0 move container to workspace number 10
+
+# Скролл между столами
+bindsym --whole-window $mod+button4 workspace prev_on_output
+bindsym --whole-window $mod+button5 workspace next_on_output
+
+# === 6. Запуск Приложений ===
+bindsym $mod+Return exec $term
+bindsym $mod+d exec --no-startup-id ~/.config/i3/scripts/software/launch-rofi.sh
+bindsym $mod+b exec $browser
+bindsym $mod+c exec --no-startup-id copyq toggle
+bindsym $mod+Shift+s exec $editor ~/.config/i3/config
+bindsym $mod+t exec --no-startup-id ~/.config/i3/scripts/software/theme-select.sh
+
+# Системные бинды
+bindsym $mod+Shift+c restart
+bindsym $mod+n exec dunstctl history-pop
+
+# === 7. Мультимедиа (Звук) ===
+bindsym XF86AudioRaiseVolume exec pamixer -i 5
+bindsym XF86AudioLowerVolume exec pamixer -d 5
+bindsym XF86AudioMute        exec pamixer -t
+bindsym XF86AudioMicMute     exec pamixer --default-source -t
+
+# === 8. Скриншоты (Maim) ===
+bindsym Print       exec --no-startup-id ~/.config/i3/scripts/software/screenshot.sh active
+bindsym Shift+Print exec --no-startup-id ~/.config/i3/scripts/software/screenshot.sh area
+
+# === 9. Правила Окон (for_window) ===
+for_window [class="Rofi"] floating enable, border pixel 0
+for_window [class="(?i)polkit"] floating enable
+for_window [class="Polkit-kde-authentication-agent-1"] floating enable
+for_window [class="Polkit-gnome-authentication-agent-1"] floating enable
+for_window [class="i3-cheatsheet"] floating enable, move position center
+for_window [class="(?i)btop-floating"] floating enable, resize set 1050 680, move position center
+for_window [class="(?i)rvrvpngui.exe"] floating enable
+for_window [class="discord"] border none
+for_window [class="(?i)vesktop"] border none
+
+# Steam & Оверлей
+for_window [class="^Steam$" title="^Friends List$"] floating enable
+for_window [class="^Steam$" title=".* - Chat"] floating enable
+for_window [class="^Steam$" title="^Settings$"] floating enable
+for_window [class="^Steam$" title=".* - News"] floating enable
+for_window [class="^Steam$" title="^Steam - News$"] floating enable
+for_window [class="^Steam$" title=".* - Screenshot Uploader"] floating enable
+for_window [title=".*Steam Guard.*"] floating enable
+for_window [class="gameoverlayui"] floating enable, border none
+
+# === 10. Автозапуск ===
+
+# 1. ПЕРВЫМ ДЕЛОМ: Настраиваем мониторы (всегда при старте и рестарте i3)
+# Добавляем небольшую паузу (sleep 1), чтобы X-сервер успел "прийти в себя"
+exec_always --no-startup-id ~/.config/i3/scripts/hardware/monitor.sh
+
+# 2. Управляем раскладками и X11-input
+exec_always --no-startup-id ~/.config/system-control-center/apply-input-settings.sh
+
+# 3. Системные службы (стартуют ОДИН раз при запуске сессии)
+exec --no-startup-id ~/.config/i3/scripts/software/polkit-agent.sh
+# exec --no-startup-id greenclip daemon  # Отключено: используется CopyQ (биндится на $mod+c)
+exec --no-startup-id dunst
+exec --no-startup-id copyq
+exec --no-startup-id nm-applet
+
+# 4. Утилиты интерфейса (запускаются ПОСЛЕ настройки мониторов)
+exec --no-startup-id [ -f ~/.fehbg ] && ~/.fehbg || ~/.config/i3/scripts/software/theme-apply.sh ~/.config/themes/ghibli-serenity
+exec_always --no-startup-id autotiling
+exec_always --no-startup-id dbus-update-activation-environment --systemd DISPLAY XAUTHORITY XDG_CURRENT_DESKTOP XDG_SESSION_DESKTOP DESKTOP_SESSION
+
+# Запускаем EWW с задержкой в 2 секунды, чтобы скрипт мониторов ТОЧНО успел отработать
+exec_always --no-startup-id sleep 2 && ~/.config/eww/launch.sh --restart
+
+# Запускаем композитор в самом конце, когда и окна, и панели уже на месте
+exec_always --no-startup-id picom --config ~/.config/picom/picom.conf -b

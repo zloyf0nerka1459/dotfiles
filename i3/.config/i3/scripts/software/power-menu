@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+
+# Опции меню
+lock=" Заблокировать"
+logout="󰈆 Выйти из i3"
+suspend="󰒲 Сон"
+hibernate="󱊚 Гибернация"
+reboot=" Перезагрузка"
+shutdown=" Выключение"
+bios="󰒚 BIOS (UEFI)"
+
+# Формируем список для выбора
+options="$lock\n$logout\n$suspend\n$hibernate\n$reboot\n$shutdown\n$bios"
+
+# Вызываем rofi напрямую, чтобы избежать проблем с чтением кавычек
+chosen="$(echo -e "$options" | rofi -dmenu -i -p "Система:" -theme-str 'window {width: 400px; border: 2px; border-radius: 10px;} listview {lines: 7; padding: 10px;} element {padding: 5px;}')"
+
+# Обрабатываем выбранный пункт
+case $chosen in
+    "$lock")
+        betterlockscreen -l blur ;;
+    "$logout")
+        i3-msg exit ;;
+    "$suspend")
+        systemctl suspend && betterlockscreen -l blur ;;
+    "$hibernate")
+        betterlockscreen -l blur & sleep 1 && systemctl hibernate ;;
+    "$reboot")
+        systemctl reboot ;;
+    "$shutdown")
+        systemctl poweroff ;;
+    "$bios")
+        systemctl reboot --firmware-setup ;;
+esac

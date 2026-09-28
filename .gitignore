@@ -1,0 +1,11 @@
+# Runtime and cache files
+current.theme
+*.bak*
+*.save*
+*.log
+__pycache__/
+*.pyc
+
+# OS files
+.DS_Store
+Thumbs.db

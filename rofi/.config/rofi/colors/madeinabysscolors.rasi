@@ -1,0 +1,76 @@
+/**
+ * Rofi Theme: Rustic Cliffside
+ * Inspired by: 2025-11-23-144053.jpg
+ */
+
+* {
+    /* Цвета */
+    background-color:   #201E24;
+    foreground:         #E5E0D5;
+    active-background:  #D4B680;
+    active-foreground:  #201E24; /* Темный текст на светлом фоне */
+    selected-background: #4A8C8C;
+    selected-foreground: #E5E0D5;
+    
+    /* Общие настройки */
+    font:               "JetBrains Mono Medium 10";
+    border-color:       #8C7C6D;
+}
+
+window {
+    width:      40%;
+    border:     2px;
+    border-color: @border-color;
+    padding:    15px;
+    border-radius: 8px; /* Немного закругленные углы */
+    location:   center;
+    anchor:     center;
+}
+
+inputbar {
+    children:   [ prompt, entry ];
+    padding:    10px;
+    border:     1px 0px 1px 0px; /* Только сверху и снизу */
+    border-color: @border-color;
+    background-color: @background-color;
+    margin:     0 0 10px 0;
+}
+
+prompt {
+    enabled:    true;
+    padding:    0 10px 0 0;
+    text-color: @active-background; /* Теплый акцент для промпта */
+}
+
+entry {
+    placeholder: "Type to search...";
+    text-color: @foreground;
+}
+
+listview {
+    columns:    1;
+    lines:      8;
+    spacing:    5px;
+    cycle:      true;
+    dynamic:    true;
+    layout:     vertical;
+    background-color: @background-color;
+}
+
+element {
+    padding:    8px;
+    border-radius: 4px;
+    background-color: @background-color;
+    text-color: @foreground;
+}
+
+element selected {
+    background-color: @selected-background; /* Приглушенный сине-зеленый для выделения */
+    text-color: @selected-foreground;
+}
+
+element-text {
+    background-color: inherit;
+    text-color:       inherit;
+    highlight:        inherit;
+}

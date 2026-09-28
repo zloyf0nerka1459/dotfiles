@@ -1,0 +1,365 @@
+;; ============================================
+;; EWW Configuration - Polybar Parity with Pywal
+;; ============================================
+
+;; Variables
+(defvar show_alt_date false)
+
+;; Listeners
+(deflisten workspaces :initial "[]" "scripts/workspaces.sh")
+(deflisten active_title :initial "" "scripts/window-title.sh")
+(deflisten window_list :initial "[]" "scripts/i3-windows.sh")
+
+;; Polls
+(defpoll time_short :interval "1s" :initial "00:00" "date '+%H:%M'")
+(defpoll time_alt :interval "1s" :initial "" "date '+%a, %d.%m.%Y  %H:%M'")
+(defpoll time_large :interval "1s" :initial "00:00" "date '+%H:%M'")
+(defpoll time_seconds :interval "1s" :initial ":00" "date '+:%S'")
+(defpoll date_full :interval "10s" :initial "" "date '+%A, %-d %B %Y'")
+(defpoll volume_data :interval "500ms" :initial '{"muted":false,"volume":50,"icon":"","text":" 50%"}' "scripts/volume.sh")
+(defpoll kbd_layout :interval "500ms" :initial "US" "scripts/keyboard.sh")
+(defpoll weather_data :interval "10m" :initial '{"temp":"--°C","feels_like":"--°C","desc":"Загрузка...","icon":"","humidity":"--%","wind":"-- км/ч","city":"Новосибирск","today_range":"--","tomorrow_temp":"--°C","tomorrow_icon":"","tomorrow_desc":"--"}' "scripts/weather.sh")
+(defpoll net_data :interval "2s" :initial '{"status":"connected","type":"ethernet","icon":"󰈀","text":"LAN","tooltip":"Сеть...","ip":"","gateway":"","ethernet":{"available":true,"device":"enp4s0","name":"Ethernet","state":"connected","connected":true,"ip":""},"wifi":{"has_hw":false,"enabled":false,"connected":false,"device":"","ssid":"","signal":0,"icon":"󰤮","ip":""},"wifi_list":[]}' "scripts/network.sh")
+(defpoll wifi_list :interval "5s" :initial "[]" "scripts/network-wifi-list.sh")
+
+;; --------------------------------------------
+;; WINDOWS
+;; --------------------------------------------
+
+;; Top Bar (matches Polybar bar/main)
+(defwindow bar_top
+  :monitor 0
+  :geometry (geometry :x "0%" :y "0px" :width "100%" :height "26px" :anchor "top center")
+  :stacking "fg"
+  :reserve (struts :distance "26px" :side "top")
+  :windowtype "dock"
+  :wm-ignore false
+  (bar_top_layout))
+
+;; Bottom Bar (matches Polybar bar/windows)
+(defwindow bar_bottom
+  :monitor 0
+  :geometry (geometry :x "0%" :y "0px" :width "100%" :height "24px" :anchor "bottom center")
+  :stacking "fg"
+  :reserve (struts :distance "24px" :side "bottom")
+  :windowtype "dock"
+  :wm-ignore false
+  (bar_bottom_layout))
+
+;; Dashboard Popup (Clock, Weather, Calendar)
+(defwindow dashboard
+  :monitor 0
+  :geometry (geometry :x "0%" :y "28px" :width "380px" :anchor "top center")
+  :stacking "fg"
+  :windowtype "dialog"
+  :wm-ignore true
+  (dashboard_layout))
+
+;; Power Menu Popup
+(defwindow powermenu
+  :monitor 0
+  :geometry (geometry :x "-8px" :y "28px" :width "290px" :height "65px" :anchor "top right")
+  :stacking "fg"
+  :windowtype "dialog"
+  :wm-ignore true
+  (powermenu_layout))
+
+;; Network Menu Popup
+(defwindow network_menu
+  :monitor 0
+  :geometry (geometry :x "-35px" :y "28px" :width "340px" :anchor "top right")
+  :stacking "fg"
+  :windowtype "dialog"
+  :wm-ignore true
+  (network_menu_layout))
+
+;; --------------------------------------------
+;; LAYOUTS
+;; --------------------------------------------
+
+(defwidget bar_top_layout []
+  (centerbox :orientation "h" :class "bar-container top-bar"
+    (box :halign "start" :space-evenly false :class "modules-left" :spacing 6
+      (workspaces_widget)
+      (window_widget))
+    (box :halign "center" :space-evenly false :class "modules-center"
+      (date_widget))
+    (box :halign "end" :space-evenly false :class "modules-right" :spacing 6
+      (sys_widget)
+      (box :class "chip chip-right-block" :orientation "h" :space-evenly false :spacing 2
+        (network_widget)
+        (volume_widget)
+        (kbd_widget)
+        (tray_widget))
+      (power_widget))))
+
+(defwidget bar_bottom_layout []
+  (box :orientation "h" :class "bar-container bottom-bar" :space-evenly false
+    (taskbar_widget)))
+
+;; --------------------------------------------
+;; MODULE WIDGETS
+;; --------------------------------------------
+
+;; Workspaces (i3)
+(defwidget workspaces_widget []
+  (box :class "chip chip-ws" :orientation "h" :space-evenly false :spacing 2
+    (for ws in workspaces
+      (button :class {ws.focused ? "ws-btn focused" : (ws.urgent ? "ws-btn urgent" : (ws.visible ? "ws-btn visible" : "ws-btn unfocused"))}
+              :onclick "i3-msg workspace ${ws.name}"
+        (label :text {ws.name})))))
+
+;; Window title
+(defwidget window_widget []
+  (box :class "chip chip-window" :space-evenly false :visible {active_title != ""}
+    (box :orientation "h" :space-evenly false :spacing 6
+      (label :text "" :class "chip-icon window-icon")
+      (label :text active_title :class "window-title"))))
+
+;; Date and Time
+(defwidget date_widget []
+  (button :class "chip chip-date"
+          :onclick "eww open --toggle dashboard"
+          :onrightclick "eww update show_alt_date=${!show_alt_date}"
+          :tooltip "Клик: погода и календарь | Правый клик: формат даты"
+    (box :orientation "h" :space-evenly false :spacing 6
+      (label :text "" :class "chip-icon date-icon")
+      (label :text {show_alt_date ? time_alt : time_short}))))
+
+;; CPU & Memory Combined Chip
+(defwidget sys_widget []
+  (button :class "chip chip-sys"
+          :onclick "~/.config/eww/scripts/btop.sh"
+          :tooltip "CPU: ${round(EWW_CPU.avg, 0)}% | RAM: ${round(EWW_RAM.used_mem_perc, 0)}% (клик: btop)"
+    (box :space-evenly false
+      (box :space-evenly false
+        (label :text "  " :class "chip-icon")
+        (label :text "${round(EWW_CPU.avg, 0)}% " :class "sys-val"))
+      (label :text " │ " :class "chip-separator")
+      (box :space-evenly false
+        (label :text "  " :class "chip-icon")
+        (label :text " ${round(EWW_RAM.used_mem_perc, 0)}%" :class "sys-val")))))
+
+;; Network Status (Ethernet + Wi-Fi)
+(defwidget network_widget []
+  (button :class "mosaic-item mosaic-net"
+          :onclick "eww open --toggle network_menu"
+          :onrightclick "scripts/network.py --toggle-wifi"
+          :tooltip "${net_data.tooltip} (клик: управление сетью | ПКМ: Wi-Fi вкл/выкл)"
+    (box :orientation "h" :space-evenly false :spacing 5
+      (label :text {net_data.icon} :class "chip-icon net-icon")
+      (label :text {net_data.text} :class "net-text"))))
+
+;; Pulseaudio Volume
+(defwidget volume_widget []
+  (eventbox :onscroll "if [ '{}' = 'up' ]; then pamixer -i 2; else pamixer -d 2; fi"
+    (button :class {volume_data.muted ? "mosaic-item mosaic-vol muted" : "mosaic-item mosaic-vol"}
+            :onclick "pamixer -t"
+            :tooltip "Scroll: volume | Click: mute/unmute"
+      (box :orientation "h" :space-evenly false :spacing 6
+        (label :text {volume_data.icon} :class "chip-icon vol-icon")
+        (label :text {volume_data.muted ? "Muted" : "${volume_data.volume}%"})))))
+
+;; Keyboard Layout
+(defwidget kbd_widget []
+  (button :class "mosaic-item mosaic-kbd"
+          :onclick "xkblayout-state set +1"
+          :tooltip "Клик: переключить раскладку"
+    (box :orientation "h" :space-evenly false :spacing 6
+      (label :text "" :class "chip-icon kbd-icon")
+      (label :text kbd_layout))))
+
+;; Tray
+(defwidget tray_widget []
+  (box :class "mosaic-item mosaic-tray"
+    (systray :spacing 6 :orientation "h" :icon-size 15 :prepend-new true :class "tray")))
+
+;; Power Button
+(defwidget power_widget []
+  (button :class "power-standalone-btn"
+          :onclick "eww open --toggle powermenu"
+          :onrightclick "~/.config/i3/scripts/software/power-menu &"
+          :tooltip "Питание"
+    (label :text "" :class "power-icon")))
+
+;; Taskbar / Window list (matches Polybar [module/i3-window-list])
+(defwidget taskbar_widget []
+  (box :class "taskbar" :orientation "h" :space-evenly false :spacing 6
+    (for win in window_list
+      (button :class {win.focused ? "task-item focused" : (win.urgent ? "task-item urgent" : "task-item")}
+              :onclick "i3-msg '[con_id=${win.id}] focus'"
+        (box :orientation "h" :space-evenly false :spacing 6
+          (label :class "task-prefix" :text {win.prefix})
+          (label :class "task-title" :text {win.title}))))))
+
+;; --------------------------------------------
+;; POPUP WIDGETS
+;; --------------------------------------------
+
+;; Dashboard Popup (Clock, Real Weather, Working Calendar)
+(defwidget dashboard_layout []
+  (box :orientation "v" :class "popup-box dashboard-box" :space-evenly false :spacing 10
+    ;; Header: Clock & Date
+    (box :class "card time-card" :orientation "v" :space-evenly false :spacing 2
+      (box :class "clock-box" :orientation "h" :space-evenly false :halign "center"
+        (label :class "clock-large" :text time_large)
+        (label :class "clock-seconds" :text time_seconds))
+      (label :class "clock-date" :text date_full))
+
+    ;; Real Weather Card
+    (box :class "card weather-card" :orientation "v" :space-evenly false :spacing 8
+      ;; Main row: Balanced two-column layout
+      (box :class "weather-main" :orientation "h" :space-evenly false
+        ;; Left column: Icon + Temp & Feels like
+        (box :class "weather-main-left" :orientation "h" :space-evenly false :spacing 12 :halign "start"
+          (label :class "weather-hero-icon" :text {weather_data.icon} :valign "center")
+          (box :orientation "v" :space-evenly false :spacing 1 :valign "center"
+            (label :class "weather-temp" :halign "start" :text {weather_data.temp})
+            (label :class "weather-feels" :halign "start" :text "Ощущается ${weather_data.feels_like}")))
+        ;; Right column: City badge + Condition description
+        (box :class "weather-main-right" :hexpand true :orientation "v" :space-evenly false :spacing 4 :halign "end" :valign "center"
+          (label :class "weather-city" :halign "end" :text {weather_data.city})
+          (label :class "weather-desc" :halign "end" :text {weather_data.desc})))
+      ;; Details row: Humidity, Wind, Daily Range
+      (box :class "weather-details" :orientation "h" :space-evenly true
+        (box :space-evenly false :spacing 5 :halign "center" :class "weather-pill"
+          (label :class "pill-icon" :text "")
+          (label :class "pill-text" :text {weather_data.humidity}))
+        (box :space-evenly false :spacing 5 :halign "center" :class "weather-pill"
+          (label :class "pill-icon" :text "")
+          (label :class "pill-text" :text {weather_data.wind}))
+        (box :space-evenly false :spacing 5 :halign "center" :class "weather-pill"
+          (label :class "pill-icon" :text "")
+          (label :class "pill-text" :text {weather_data.today_range})))
+      ;; Tomorrow Forecast row
+      (box :class "weather-tomorrow" :orientation "h" :space-evenly false :spacing 6 :halign "center"
+        (label :class "tomorrow-label" :text "Завтра:")
+        (label :class "tomorrow-icon" :text {weather_data.tomorrow_icon})
+        (label :class "tomorrow-val" :text "${weather_data.tomorrow_temp}, ${weather_data.tomorrow_desc}")))
+
+    ;; Small Working Calendar Card
+    (box :class "card cal-card" :orientation "v" :space-evenly false
+      (calendar :class "cal"))))
+
+;; Power Menu Popup
+(defwidget powermenu_layout []
+  (box :class "popup-box powermenu-box" :orientation "h" :space-evenly true :spacing 10
+    (button :class "pm-btn pm-lock" :onclick "betterlockscreen -l blur & eww close powermenu" :tooltip "Lock screen" "")
+    (button :class "pm-btn pm-sleep" :onclick "eww close powermenu && systemctl suspend" :tooltip "Сон" "󰒲")
+    (button :class "pm-btn pm-logout" :onclick "i3-msg exit" :tooltip "Exit i3" "󰈆")
+    (button :class "pm-btn pm-reboot" :onclick "systemctl reboot" :tooltip "Reboot" "")
+    (button :class "pm-btn pm-shutdown" :onclick "systemctl poweroff" :tooltip "Power off" "")))
+
+;; Network Menu Popup
+(defwidget network_menu_layout []
+  (box :orientation "v" :class "popup-box network-box" :space-evenly false :spacing 10
+    ;; 1. Header Card
+    (box :class "card net-card-header" :orientation "h" :space-evenly false
+      (box :orientation "h" :space-evenly false :spacing 12 :halign "start"
+        (label :class "net-hero-icon" :text {net_data.icon})
+        (box :orientation "v" :space-evenly false :spacing 2 :valign "center"
+          (label :class "net-title" :halign "start" :text "Сеть и Интернет")
+          (label :class "net-subtitle" :halign "start" 
+                 :text {net_data.status == "connected" ? (net_data.type == "ethernet" ? "Проводное подключение" : "Беспроводное (Wi-Fi)") : "Нет подключения"})))
+      (box :hexpand true :halign "end" :valign "center" :spacing 6 :space-evenly false
+        (button :class "net-btn-icon" :onclick "scripts/network.py --rescan" :tooltip "Сканировать сети"
+          (label :text "󰑐" :class "btn-icon-glyph"))
+        (button :class {net_data.wifi.enabled ? "net-toggle-btn active" : "net-toggle-btn inactive"}
+                :onclick "scripts/network.py --toggle-wifi"
+                :tooltip "Включить / отключить Wi-Fi"
+                :visible {net_data.wifi.has_hw}
+          (label :text {net_data.wifi.enabled ? "Wi-Fi: ВКЛ" : "Wi-Fi: ВЫКЛ"}))))
+
+    ;; 2. Ethernet Card
+    (box :class "card net-card-section" :orientation "v" :space-evenly false :spacing 6
+      (box :orientation "h" :space-evenly false :spacing 8
+        (label :class "net-section-icon" :text "󰈀")
+        (label :class "net-section-title" :text "Ethernet")
+        (box :hexpand true :halign "end"
+          (label :class {net_data.ethernet.connected ? "net-badge badge-active" : "net-badge badge-inactive"}
+                 :text {net_data.ethernet.connected ? "Подключено" : "Отключено"})))
+      (box :class "net-details-box" :orientation "v" :space-evenly false :spacing 3
+        :visible {net_data.ethernet.connected}
+        (box :orientation "h" :space-evenly false
+          (label :class "net-detail-label" :text "Интерфейс: ")
+          (label :class "net-detail-val" :text {net_data.ethernet.device}))
+        (box :orientation "h" :space-evenly false
+          (label :class "net-detail-label" :text "IP-адрес: ")
+          (label :class "net-detail-val" :text {net_data.ethernet.ip}))
+        (box :orientation "h" :space-evenly false :visible {net_data.gateway != ""}
+          (label :class "net-detail-label" :text "Шлюз: ")
+          (label :class "net-detail-val" :text {net_data.gateway})))
+      (box :orientation "h" :space-evenly false :spacing 8 :class "net-btn-row"
+        (button :class "net-action-sm-btn" 
+                :visible {net_data.ethernet.connected}
+                :onclick "scripts/network.py --disconnect-eth"
+                "Отключить кабель")
+        (button :class "net-action-sm-btn connect" 
+                :visible {!net_data.ethernet.connected && net_data.ethernet.available}
+                :onclick "scripts/network.py --connect-eth"
+                "Подключить")))
+
+    ;; 3. Wi-Fi Card
+    (box :class "card net-card-section" :orientation "v" :space-evenly false :spacing 6
+      (box :orientation "h" :space-evenly false :spacing 8
+        (label :class "net-section-icon" :text "󰤨")
+        (label :class "net-section-title" :text "Wi-Fi")
+        (box :hexpand true :halign "end"
+          (label :class {net_data.wifi.connected ? "net-badge badge-active" : (net_data.wifi.enabled ? "net-badge badge-idle" : "net-badge badge-inactive")}
+                 :text {net_data.wifi.connected ? "Подключено" : (net_data.wifi.enabled ? "Готов" : "Выключен")})))
+      
+      ;; If Wi-Fi hardware not present
+      (box :class "net-hw-missing" :orientation "h" :space-evenly false :spacing 8 :halign "center"
+        :visible {!net_data.wifi.has_hw}
+        (label :class "hw-missing-icon" :text "󰤮")
+        (label :class "hw-missing-text" :text "Wi-Fi адаптер не подключен"))
+
+      ;; If Wi-Fi present but disabled
+      (box :class "net-disabled-box" :orientation "v" :space-evenly false :spacing 4 :halign "center"
+        :visible {net_data.wifi.has_hw && !net_data.wifi.enabled}
+        (label :class "disabled-text" :text "Беспроводной модуль отключен")
+        (button :class "net-action-sm-btn connect" :onclick "scripts/network.py --toggle-wifi" "Включить Wi-Fi"))
+
+      ;; If Wi-Fi connected to active SSID
+      (box :class "net-active-wifi-box" :orientation "v" :space-evenly false :spacing 4
+        :visible {net_data.wifi.connected}
+        (box :orientation "h" :space-evenly false
+          (label :class "net-detail-label" :text "Сеть: ")
+          (label :class "net-detail-val bold" :text {net_data.wifi.ssid})
+          (box :hexpand true :halign "end"
+            (label :class "net-detail-val" :text "${net_data.wifi.signal}% ${net_data.wifi.icon}")))
+        (box :orientation "h" :space-evenly false
+          (label :class "net-detail-label" :text "IP: ")
+          (label :class "net-detail-val" :text {net_data.wifi.ip})
+          (box :hexpand true :halign "end"
+            (button :class "net-link-btn" :onclick "scripts/network.py --disconnect-wifi" "Отключить"))))
+
+      ;; Available Networks List (if Wi-Fi enabled)
+      (box :class "net-wifi-list-box" :orientation "v" :space-evenly false :spacing 4
+        :visible {net_data.wifi.has_hw && net_data.wifi.enabled}
+        (box :orientation "h" :space-evenly false :class "wifi-list-header"
+          (label :class "wifi-list-title" :halign "start" :text "Доступные сети")
+          (box :hexpand true :halign "end"
+            (button :class "wifi-rescan-link" :onclick "scripts/network.py --rescan" "Сканировать 󰑐")))
+        (box :class "wifi-list" :orientation "v" :space-evenly false :spacing 3
+          (for net in wifi_list
+            (box :class {net.in_use ? "wifi-item in-use" : "wifi-item"} :orientation "h" :space-evenly false :spacing 8
+              (label :class "wifi-item-icon" :text {net.icon})
+              (label :class "wifi-item-ssid" :limit-width 16 :halign "start" :text {net.ssid})
+              (label :class "wifi-item-lock" :text {net.locked ? "" : ""})
+              (label :class "wifi-item-signal" :text "${net.signal}%")
+              (box :hexpand true :halign "end"
+                (button :class {net.in_use ? "wifi-btn active" : "wifi-btn"}
+                        :onclick {net.in_use ? "" : "scripts/network-connect.sh '${net.ssid}' '${net.locked}'"}
+                  (label :text {net.in_use ? "✓" : "Подкл."}))))))))
+
+    ;; 4. Footer Quick Links
+    (box :class "card net-card-footer" :orientation "h" :space-evenly true :spacing 8
+      (button :class "net-footer-btn" :onclick "nm-connection-editor & eww close network_menu"
+        (box :orientation "h" :space-evenly false :spacing 6 :halign "center"
+          (label :text "󰒓" :class "footer-btn-icon")
+          (label :text "Панель сети")))
+      (button :class "net-footer-btn" :onclick "kitty --class btop-floating -T 'Network TUI' -e nmtui & eww close network_menu"
+        (box :orientation "h" :space-evenly false :spacing 6 :halign "center"
+          (label :text "" :class "footer-btn-icon")
+          (label :text "nmtui"))))))

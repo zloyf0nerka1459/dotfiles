@@ -1,0 +1,71 @@
+/* sidebar.rasi */
+configuration {
+    show-icons: true;
+    /* Размер иконок, подбери под себя */
+    icon-theme: "Papirus"; 
+}
+
+* {
+    /* Цвета будут браться из wal, если настроено, или задай свои */
+    background-color: transparent;
+    text-color:       white; 
+}
+
+window {
+    /* Закрепляем справа (east), во всю высоту (100%) */
+    anchor:     east;
+    location:   east;
+    width:      20%; /* Ширина панели */
+    height:     100%;
+    
+    /* Отступы, чтобы не прилипало к краю */
+    x-offset:   0px;
+    y-offset:   0px;
+
+    /* Цвет фона самой панели */
+    background-color: #1e1e2ee0; /* Полупрозрачный темный */
+    border: 0px;
+    children: [ mainbox ];
+}
+
+mainbox {
+    orientation: vertical;
+    children: [ inputbar, listview ];
+}
+
+inputbar {
+    /* Поле поиска сверху */
+    padding: 10px;
+    children: [ entry ];
+}
+
+entry {
+    placeholder: "Search Theme...";
+}
+
+listview {
+    layout: vertical;
+    /* Отступ для списка */
+    margin: 10px;
+    lines: 10; 
+}
+
+element {
+    orientation: horizontal;
+    padding: 10px;
+    spacing: 10px;
+}
+
+element-icon {
+    size: 48px; /* Размер миниатюры */
+}
+
+element-text {
+    vertical-align: 0.5;
+}
+
+/* Активный элемент */
+element selected {
+    background-color: #ffffff20;
+    border-radius: 10px;
+}

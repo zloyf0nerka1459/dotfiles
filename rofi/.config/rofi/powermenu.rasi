@@ -1,0 +1,78 @@
+/* Тема Made in Abyss (Power Menu) */
+
+/* Цвета */
+* {
+    bg: #232126;      /* Темная крыша */
+    acc: #dcb178;     /* Золотой свет */
+    txt: #e0e6f0;     /* Туман */
+    
+    background-color: transparent;
+    text-color: @txt;
+    margin: 0;
+    padding: 0;
+    spacing: 0;
+}
+
+window {
+    /* Строго по центру */
+    location: center;
+    anchor: center;
+    fullscreen: false;
+    
+    /* Размеры и рамка */
+    width: 250px; /* Сделаем чуть уже */
+    border: 2px;
+    border-color: @acc;
+    border-radius: 15px;
+    background-color: @bg;
+    
+    /* Отступы внутри окна */
+    padding: 15px;
+    
+    /* Убираем лишние элементы окна */
+    transparency: "real";
+}
+
+/* Главный контейнер */
+mainbox {
+    /* ОСТАВЛЯЕМ ТОЛЬКО СПИСОК. Это уберет строку поиска! */
+    children: [ listview ];
+    background-color: transparent;
+}
+
+/* Список кнопок */
+listview {
+    columns: 1;
+    lines: 5;             /* Ровно 5 кнопок */
+    spacing: 8px;         /* Отступ между кнопками */
+    cycle: true;
+    dynamic: true;
+    scrollbar: false;
+    background-color: transparent;
+}
+
+/* Элемент списка (кнопка) */
+element {
+    background-color: transparent;
+    text-color: @txt;
+    orientation: horizontal;
+    border-radius: 10px;
+    padding: 8px 12px;
+}
+
+/* Текст на кнопке */
+element-text {
+    font: "JetBrains Mono Bold 13";
+    /* Центрируем текст */
+    horizontal-align: 0.5;
+    vertical-align: 0.5;
+    background-color: transparent;
+    text-color: inherit;
+}
+
+/* При наведении/выборе */
+element selected {
+    background-color: @acc; /* Золотой фон */
+    text-color: @bg;        /* Темный текст */
+    border: 0px;
+}

@@ -1,0 +1,796 @@
+@import "colors.scss";
+
+* {
+  font-family: "JetBrainsMono Nerd Font", monospace;
+  font-size: 12px;
+}
+
+window {
+  background-color: transparent;
+}
+
+button {
+  background: none;
+  background-color: transparent;
+  background-image: none;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  text-shadow: none;
+  outline: none;
+  min-height: 0;
+  min-width: 0;
+  padding: 0;
+  margin: 0;
+}
+
+/* Bars Container */
+.bar-container {
+  background-color: rgba($color0, 0.95);
+  color: $foreground;
+  padding: 0 8px;
+  min-height: 0;
+}
+
+.top-bar {
+  border-bottom: 1px solid rgba($color8, 0.4);
+  padding: 1px 8px;
+  min-height: 0;
+}
+
+.bottom-bar {
+  border-top: 1px solid rgba($color8, 0.4);
+  padding: 1px 8px;
+  min-height: 0;
+}
+
+/* Base Badge / Chip Style */
+.chip {
+  background-color: rgba($color8, 0.22);
+  border: 1px solid rgba($color8, 0.45);
+  border-radius: 4px;
+  padding: 1px 6px;
+  min-height: 0;
+  transition: all 0.15s ease;
+}
+
+.chip:hover {
+  background-color: rgba($color4, 0.15);
+  border-color: rgba($color4, 0.55);
+}
+
+.chip-icon {
+  color: $accent;
+  font-weight: bold;
+}
+
+.kbd-icon, .vol-icon, .window-icon, .date-icon {
+  padding-right: 8px;
+}
+
+.chip-separator {
+  color: rgba($color8, 0.7);
+  font-size: 12px;
+}
+
+/* Workspaces Chip */
+.chip-ws {
+  padding: 1px 3px;
+}
+
+.ws-btn {
+  padding: 1px 6px;
+  margin: 0 1px;
+  border-radius: 3px;
+  color: $mantle;
+  min-height: 0;
+  transition: all 0.15s ease;
+}
+
+.ws-btn:hover {
+  color: $foreground;
+  background-color: rgba($color4, 0.2);
+}
+
+.ws-btn.visible {
+  color: $foreground;
+}
+
+.ws-btn.focused {
+  background-color: $accent;
+  color: $background;
+  font-weight: bold;
+  padding: 1px 8px;
+}
+
+.ws-btn.urgent {
+  background-color: $accent2;
+  color: $background;
+  font-weight: bold;
+  padding: 1px 8px;
+}
+
+/* Window Title Chip */
+.chip-window {
+  padding: 1px 8px;
+}
+
+.window-title {
+  color: $foreground;
+  font-size: 12px;
+}
+
+/* Date & Time Chip */
+.chip-date {
+  padding: 1px 10px;
+  font-weight: bold;
+}
+
+.chip-date:hover {
+  background-color: rgba($color4, 0.2);
+  border-color: $accent;
+}
+
+/* Right Island Mosaic */
+.chip-right-block {
+  padding: 1px 3px;
+}
+
+.mosaic-item {
+  padding: 1px 6px;
+  margin: 0 1px;
+  border-radius: 3px;
+  min-height: 0;
+  transition: all 0.15s ease;
+}
+
+.mosaic-item:hover {
+  background-color: rgba($color4, 0.2);
+}
+
+/* System (CPU + RAM) Chip */
+.chip-sys {
+  padding: 1px 10px;
+  transition: all 0.15s ease;
+}
+
+.chip-sys:hover {
+  background-color: rgba($color4, 0.2);
+  border-color: $accent;
+}
+
+.sys-val {
+  color: $foreground;
+  font-weight: bold;
+}
+
+.mosaic-vol {
+  padding: 1px 6px;
+}
+
+.mosaic-vol.muted {
+  background-color: rgba($color1, 0.2);
+  color: $accent2;
+}
+
+.mosaic-vol.muted .vol-icon {
+  color: $accent2;
+}
+
+.mosaic-net {
+  padding: 1px 6px;
+  font-weight: 500;
+}
+
+.net-icon {
+  color: $accent;
+  padding-right: 4px;
+}
+
+.net-text {
+  color: $foreground;
+  font-size: 11px;
+}
+
+.mosaic-kbd {
+  padding: 1px 6px;
+  font-weight: bold;
+}
+
+.mosaic-tray {
+  padding: 1px 4px;
+}
+
+button.power-standalone-btn,
+.power-standalone-btn {
+  all: unset;
+  background: none;
+  background-color: transparent;
+  background-image: none;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  text-shadow: none;
+  outline: none;
+  padding: 0 4px;
+  margin: 0;
+  min-height: 0;
+  min-width: 0;
+  transition: all 0.15s ease;
+}
+
+button.power-standalone-btn:hover,
+button.power-standalone-btn:active,
+button.power-standalone-btn:focus,
+.power-standalone-btn:hover,
+.power-standalone-btn:active,
+.power-standalone-btn:focus {
+  all: unset;
+  background: none;
+  background-color: transparent;
+  background-image: none;
+  border: none;
+  box-shadow: none;
+  outline: none;
+  padding: 0 4px;
+}
+
+.power-icon {
+  color: $accent2;
+  font-size: 13px;
+  font-weight: bold;
+  transition: all 0.15s ease;
+}
+
+button.power-standalone-btn:hover .power-icon,
+.power-standalone-btn:hover .power-icon {
+  color: lighten($accent2, 25%);
+}
+
+/* Bottom Bar: Window List / Taskbar */
+.taskbar {
+  padding: 1px 2px;
+  min-height: 0;
+}
+
+.task-item {
+  padding: 1px 8px;
+  margin-right: 4px;
+  border-radius: 3px;
+  background-color: rgba($color8, 0.2);
+  border: 1px solid rgba($color8, 0.6);
+  min-height: 0;
+  transition: all 0.15s ease;
+}
+
+.task-item:hover {
+  background-color: rgba($color4, 0.2);
+  border-color: $accent;
+}
+
+.task-item.focused {
+  background-color: rgba($color4, 0.25);
+  border: 1px solid $accent;
+}
+
+.task-item.urgent {
+  background-color: rgba($color1, 0.3);
+  border: 1px solid $accent2;
+}
+
+.task-prefix {
+  color: $accent;
+  font-weight: bold;
+}
+
+.task-title {
+  color: $foreground;
+}
+
+/* Popups Common */
+.popup-box {
+  background-color: $background;
+  border: 2px solid $mantle;
+  border-radius: 10px;
+  padding: 16px;
+}
+
+/* Dashboard Popup */
+.dashboard-box {
+  padding: 12px;
+}
+
+.card {
+  background-color: rgba($color8, 0.18);
+  border: 1px solid rgba($color8, 0.35);
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+
+/* Time Card */
+.time-card {
+  padding: 10px 12px;
+}
+
+.clock-box {
+  padding: 0;
+}
+
+.clock-large {
+  font-size: 34px;
+  font-weight: 900;
+  color: $accent;
+}
+
+.clock-seconds {
+  font-size: 15px;
+  font-weight: bold;
+  color: $mantle;
+  margin-top: 14px;
+  margin-left: 2px;
+}
+
+.clock-date {
+  font-size: 13px;
+  font-weight: bold;
+  color: $foreground;
+  margin-top: 2px;
+}
+
+/* Weather Card */
+.weather-card {
+  padding: 10px 12px;
+}
+
+.weather-main {
+  padding: 2px 4px 6px 4px;
+}
+
+.weather-hero-icon {
+  font-size: 34px;
+  color: $accent;
+  margin-right: 10px;
+  margin-left: 2px;
+}
+
+.weather-temp {
+  font-size: 24px;
+  font-weight: 900;
+  color: $foreground;
+}
+
+.weather-feels {
+  font-size: 11px;
+  color: rgba($foreground, 0.7);
+}
+
+.weather-city {
+  font-size: 11px;
+  font-weight: bold;
+  color: $accent;
+  background-color: rgba($color4, 0.18);
+  border: 1px solid rgba($accent, 0.3);
+  border-radius: 4px;
+  padding: 2px 7px;
+}
+
+.weather-desc {
+  font-size: 12px;
+  color: rgba($foreground, 0.9);
+  font-weight: 500;
+}
+
+.weather-details {
+  margin-top: 2px;
+}
+
+.weather-pill {
+  padding: 3px 6px;
+  border-radius: 4px;
+  background-color: rgba($color8, 0.25);
+}
+
+.pill-icon {
+  color: $accent;
+  font-size: 13px;
+}
+
+.pill-text {
+  color: $foreground;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.weather-tomorrow {
+  font-size: 12px;
+  color: $foreground;
+  padding-top: 6px;
+  border-top: 1px dashed rgba($color8, 0.35);
+}
+
+.tomorrow-label {
+  color: $mantle;
+  font-weight: bold;
+}
+
+.tomorrow-icon {
+  color: $accent;
+}
+
+.tomorrow-val {
+  color: $foreground;
+}
+
+/* Calendar Card */
+.cal-card {
+  padding: 6px 8px;
+}
+
+.cal {
+  color: $foreground;
+  font-size: 12px;
+}
+
+.cal header {
+  color: $accent;
+  font-weight: bold;
+  font-size: 13px;
+  padding-bottom: 4px;
+}
+
+.cal button {
+  padding: 2px 4px;
+  border-radius: 4px;
+  transition: all 0.15s ease;
+}
+
+.cal button:hover {
+  background-color: rgba($color4, 0.25);
+}
+
+.cal:selected {
+  background-color: $accent;
+  color: $background;
+  font-weight: bold;
+  border-radius: 4px;
+}
+
+/* Power Menu Popup */
+.powermenu-box {
+  padding: 12px 16px;
+}
+
+.pm-btn {
+  font-size: 20px;
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: 1px solid rgba($color8, 0.6);
+  background-color: rgba($color8, 0.2);
+  transition: all 0.15s ease;
+}
+
+.pm-btn:hover {
+  background-color: rgba($color4, 0.3);
+}
+
+.pm-lock {
+  color: $foreground;
+}
+
+.pm-sleep {
+  color: $color6;
+}
+
+.pm-logout {
+  color: $accent;
+}
+
+.pm-reboot {
+  color: $color3;
+}
+
+.pm-shutdown {
+  color: $accent2;
+}
+
+.pm-shutdown:hover {
+  background-color: rgba($color1, 0.3);
+}
+
+/* Network Menu Popup */
+.network-box {
+  padding: 12px;
+}
+
+.net-card-header {
+  padding: 10px 12px;
+}
+
+.net-hero-icon {
+  font-size: 26px;
+  color: $accent;
+}
+
+.net-title {
+  font-size: 13px;
+  font-weight: bold;
+  color: $foreground;
+}
+
+.net-subtitle {
+  font-size: 11px;
+  color: rgba($foreground, 0.7);
+}
+
+.net-btn-icon {
+  background-color: rgba($color8, 0.25);
+  border: 1px solid rgba($color8, 0.5);
+  border-radius: 6px;
+  padding: 4px 8px;
+  transition: all 0.15s ease;
+}
+
+.net-btn-icon:hover {
+  background-color: rgba($color4, 0.3);
+  border-color: $accent;
+}
+
+.btn-icon-glyph {
+  color: $accent;
+  font-size: 13px;
+}
+
+.net-toggle-btn {
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: bold;
+  border: 1px solid transparent;
+  transition: all 0.15s ease;
+}
+
+.net-toggle-btn.active {
+  background-color: rgba($color2, 0.25);
+  border-color: rgba($color2, 0.6);
+  color: lighten($color2, 30%);
+}
+
+.net-toggle-btn.inactive {
+  background-color: rgba($color8, 0.2);
+  border-color: rgba($color8, 0.4);
+  color: rgba($foreground, 0.6);
+}
+
+.net-card-section {
+  padding: 10px 12px;
+}
+
+.net-section-icon {
+  font-size: 14px;
+  color: $accent;
+}
+
+.net-section-title {
+  font-size: 12px;
+  font-weight: bold;
+  color: $foreground;
+}
+
+.net-badge {
+  font-size: 10px;
+  font-weight: bold;
+  padding: 2px 7px;
+  border-radius: 4px;
+}
+
+.badge-active {
+  background-color: rgba($color2, 0.25);
+  border: 1px solid rgba($color2, 0.5);
+  color: lighten($color2, 30%);
+}
+
+.badge-idle {
+  background-color: rgba($color3, 0.2);
+  border: 1px solid rgba($color3, 0.4);
+  color: $color3;
+}
+
+.badge-inactive {
+  background-color: rgba($color8, 0.25);
+  border: 1px solid rgba($color8, 0.4);
+  color: rgba($foreground, 0.6);
+}
+
+.net-details-box {
+  padding: 4px 6px;
+  background-color: rgba($color0, 0.3);
+  border-radius: 4px;
+}
+
+.net-detail-label {
+  font-size: 11px;
+  color: $mantle;
+}
+
+.net-detail-val {
+  font-size: 11px;
+  color: $foreground;
+}
+
+.net-detail-val.bold {
+  font-weight: bold;
+  color: $accent;
+}
+
+.net-btn-row {
+  margin-top: 4px;
+}
+
+.net-action-sm-btn {
+  background-color: rgba($color8, 0.25);
+  border: 1px solid rgba($color8, 0.5);
+  border-radius: 5px;
+  padding: 4px 10px;
+  font-size: 11px;
+  color: $foreground;
+  transition: all 0.15s ease;
+}
+
+.net-action-sm-btn:hover {
+  background-color: rgba($color4, 0.3);
+  border-color: $accent;
+}
+
+.net-action-sm-btn.connect {
+  background-color: rgba($color2, 0.2);
+  border-color: rgba($color2, 0.5);
+  color: lighten($color2, 30%);
+}
+
+.net-hw-missing {
+  padding: 8px;
+}
+
+.hw-missing-icon {
+  font-size: 15px;
+  color: $mantle;
+  padding-right: 6px;
+}
+
+.hw-missing-text {
+  font-size: 11px;
+  color: $mantle;
+}
+
+.net-active-wifi-box {
+  padding: 6px 8px;
+  background-color: rgba($color4, 0.15);
+  border: 1px solid rgba($accent, 0.3);
+  border-radius: 6px;
+}
+
+.net-link-btn {
+  font-size: 11px;
+  color: $accent2;
+  font-weight: bold;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background-color: rgba($color1, 0.2);
+  border: 1px solid rgba($accent2, 0.4);
+}
+
+.net-link-btn:hover {
+  background-color: rgba($color1, 0.4);
+}
+
+.wifi-list-header {
+  padding: 4px 2px 2px 2px;
+  border-top: 1px dashed rgba($color8, 0.3);
+}
+
+.wifi-list-title {
+  font-size: 11px;
+  font-weight: bold;
+  color: $mantle;
+}
+
+.wifi-rescan-link {
+  font-size: 11px;
+  color: $accent;
+  padding: 1px 4px;
+}
+
+.wifi-rescan-link:hover {
+  text-decoration: underline;
+}
+
+.wifi-list {
+  margin-top: 2px;
+}
+
+.wifi-item {
+  padding: 5px 8px;
+  background-color: rgba($color8, 0.18);
+  border: 1px solid rgba($color8, 0.35);
+  border-radius: 6px;
+  transition: all 0.15s ease;
+}
+
+.wifi-item:hover {
+  background-color: rgba($color4, 0.2);
+  border-color: rgba($accent, 0.4);
+}
+
+.wifi-item.in-use {
+  background-color: rgba($color2, 0.2);
+  border-color: rgba($color2, 0.5);
+}
+
+.wifi-item-icon {
+  font-size: 13px;
+  color: $accent;
+}
+
+.wifi-item-ssid {
+  font-size: 11px;
+  font-weight: bold;
+  color: $foreground;
+}
+
+.wifi-item-lock {
+  font-size: 11px;
+  color: $mantle;
+}
+
+.wifi-item-signal {
+  font-size: 10px;
+  color: $mantle;
+}
+
+.wifi-btn {
+  background-color: rgba($color8, 0.3);
+  border: 1px solid rgba($color8, 0.5);
+  border-radius: 4px;
+  padding: 2px 8px;
+  font-size: 10px;
+  color: $foreground;
+  transition: all 0.15s ease;
+}
+
+.wifi-btn:hover {
+  background-color: $accent;
+  color: $background;
+  font-weight: bold;
+}
+
+.wifi-btn.active {
+  background-color: rgba($color2, 0.3);
+  border-color: $color2;
+  color: lighten($color2, 30%);
+  font-weight: bold;
+}
+
+.net-card-footer {
+  padding: 8px 10px;
+}
+
+.net-footer-btn {
+  padding: 6px 10px;
+  background-color: rgba($color8, 0.22);
+  border: 1px solid rgba($color8, 0.45);
+  border-radius: 6px;
+  font-size: 11px;
+  color: $foreground;
+  transition: all 0.15s ease;
+}
+
+.net-footer-btn:hover {
+  background-color: rgba($color4, 0.25);
+  border-color: $accent;
+}
+
+.footer-btn-icon {
+  color: $accent;
+  font-size: 13px;
+  padding-right: 4px;
+}

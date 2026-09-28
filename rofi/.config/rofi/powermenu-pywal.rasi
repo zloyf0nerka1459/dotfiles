@@ -1,0 +1,111 @@
+/* Power Menu - в стиле основного Rofi */
+
+@import "~/.cache/wal/colors-rofi-dark.rasi"
+
+* {
+    text: @foreground;
+    panel: #0f1218ef;
+    panel-alt: #181c24c7;
+    border-col: #ffffff1a;
+    accent: #6daeea;
+    accent-text: #101319;
+    muted: #e7e9eea8;
+}
+
+window {
+    width: 420px;
+    height: 400px;
+    border: 0px;
+    padding: 0px;
+    background-color: transparent;
+    border-radius: 0px;
+    location: center;
+    anchor: center;
+}
+
+mainbox {
+    background-color: @panel;
+    border: 1px;
+    border-color: @border-col;
+    border-radius: 0px;
+    padding: 18px;
+    spacing: 16px;
+    children: [inputbar, listview];
+}
+
+inputbar {
+    children: [prompt];
+    background-color: @panel-alt;
+    border: 1px;
+    border-color: @border-col;
+    border-radius: 0px;
+    padding: 12px 14px;
+    spacing: 10px;
+}
+
+prompt {
+    background-color: transparent;
+    border: 0px;
+    border-radius: 0px;
+    padding: 0px;
+    text-color: @text;
+    font: "JetBrainsMono Nerd Font Bold 12";
+    enabled: true;
+}
+
+listview {
+    background-color: transparent;
+    border: 0px;
+    border-radius: 0px;
+    padding: 0px;
+    columns: 1;
+    lines: 7;
+    spacing: 4px;
+    cycle: true;
+    dynamic: true;
+}
+
+element {
+    background-color: transparent;
+    border: 0px;
+    border-radius: 0px;
+    padding: 12px 14px;
+    spacing: 0px;
+    text-color: @text;
+}
+
+element-text {
+    background-color: transparent;
+    text-color: inherit;
+    highlight: None;
+    vertical-align: 0.5;
+    font: "JetBrainsMono Nerd Font 12";
+}
+
+element-text selected {
+    text-color: @accent-text;
+}
+
+element selected {
+    background-color: @accent;
+    text-color: @accent-text;
+}
+
+scrollbar {
+    width: 4px;
+    background-color: transparent;
+    border-radius: 0px;
+}
+
+handle {
+    background-color: @border-col;
+    border-radius: 0px;
+}
+
+element normal active,
+element normal urgent,
+element alternate normal,
+element alternate active,
+element alternate urgent {
+    background-color: transparent;
+}

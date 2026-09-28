@@ -1,0 +1,80 @@
+# ==============================================================================
+# Modern & Minimal Starship Prompt for Kitty & Fish
+# ==============================================================================
+
+# Clean format without annoying language version clutter
+format = """
+$directory\
+$git_branch\
+$git_status\
+$python\
+$cmd_duration\
+$line_break\
+$character"""
+
+add_newline = false
+
+[character]
+success_symbol = "[❯](bold green)"
+error_symbol = "[❯](bold red)"
+vicmd_symbol = "[❮](bold yellow)"
+
+[directory]
+truncation_length = 3
+truncation_symbol = "…/"
+home_symbol = "~"
+style = "bold cyan"
+read_only = " 󰌾"
+read_only_style = "red"
+
+[git_branch]
+symbol = " "
+style = "bold purple"
+format = "on [$symbol$branch]($style) "
+
+[git_status]
+style = "bold red"
+format = '([\[$all_status$ahead_behind\]]($style) )'
+
+# Disable language and runtime version spam
+[python]
+disabled = true
+
+[cmd_duration]
+min_time = 2_000
+format = "took [$duration]($style) "
+style = "bold yellow"
+
+# Disable noisy language version spam
+[lua]
+disabled = true
+
+[nodejs]
+disabled = true
+
+[package]
+disabled = true
+
+[golang]
+disabled = true
+
+[rust]
+disabled = true
+
+[ruby]
+disabled = true
+
+[php]
+disabled = true
+
+[java]
+disabled = true
+
+[c]
+disabled = true
+
+[dotnet]
+disabled = true
+
+[docker_context]
+disabled = true

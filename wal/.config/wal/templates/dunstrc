@@ -1,0 +1,70 @@
+[global]
+    monitor = 0
+    follow = mouse
+    
+    # Геометрия: аккуратная адаптивная карточка вместо жесткого кирпича
+    width = (300, 450)
+    height = 300
+    origin = top-right
+    offset = 20x20
+    notification_limit = 4
+    
+    # Отступы внутри карточки, чтобы текст не прилипал к краям
+    padding = 12
+    horizontal_padding = 12
+    text_icon_padding = 10
+    
+    # Возвращаем скругления (10px идеально подходят под твой Picom)
+    corner_radius = 10
+    frame_width = 2
+    
+    sort = yes
+    direction = down
+    
+    # Шрифт (лучше использовать JetBrains Mono или твой системный вместо generic Monospace)
+    font = "JetBrains Mono 10"
+    line_height = 3
+    markup = full
+
+    # Настройка заголовка: выводит [Имя Приложения] цветом {color2}
+    format = "<span foreground='{color2}'>[%a]</span> <b>%s</b>\n%b"
+    
+    alignment = left
+    vertical_alignment = center
+    show_age_threshold = 60
+    ellipsize = middle
+    ignore_newline = no
+    stack_duplicates = true
+    hide_duplicate_count = false
+    
+    # Настройка иконок
+    icon_position = left
+    min_icon_size = 32
+    max_icon_size = 64
+    icon_path = /usr/share/icons/Papirus/16x16/apps:/usr/share/icons/Papirus/16x16/devices
+    
+    sticky_history = yes
+    history_length = 20
+    mouse_left_click = close_current
+    mouse_middle_click = do_action
+    mouse_right_click = close_all
+
+# === ИСПРАВЛЕННАЯ ПАЛИТРА УВЕДОМЛЕНИЙ ===
+
+[urgency_low]
+    background = "{background}"
+    foreground = "{foreground}"
+    frame_color = "{color8}"       # Приглушенный цвет для второстепенных рамок
+    timeout = 4
+
+[urgency_normal]
+    background = "{background}"
+    foreground = "{foreground}"
+    frame_color = "{color2}"       # Твой главный акцентный цвет из обоев для рамки
+    timeout = 7
+
+[urgency_critical]                 # В Dunst используется "critical", а не "high"
+    background = "{color1}"        # Обычно это красный/тревожный цвет из палитры
+    foreground = "{foreground}"
+    frame_color = "{color1}"
+    timeout = 0

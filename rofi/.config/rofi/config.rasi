@@ -1,0 +1,142 @@
+configuration {
+    modi: "drun,run,window";
+    icon-theme: "Papirus";
+    show-icons: true;
+    terminal: "kitty";
+    drun-display-format: "{name}";
+    location: 0;
+    disable-history: false;
+    hide-scrollbar: false;
+    display-drun: "Apps";
+    display-run: "Run";
+    display-window: "Windows";
+    sidebar-mode: false;
+}
+
+@import "~/.cache/wal/colors-rofi-dark.rasi"
+
+* {
+    text: @foreground;
+    panel: @background;
+    panel-alt: @background;
+    border-col: @selected-normal-background;
+    accent: @selected-normal-background;
+    accent-text: @background;
+    muted: @foreground;
+}
+
+window {
+    width: 720px;
+    height: 560px;
+    border: 2px;
+    border-color: @border-col;
+    padding: 0px;
+    background-color: @panel;
+    border-radius: 8px;
+}
+
+mainbox {
+    background-color: transparent;
+    border: 0px;
+    border-radius: 0px;
+    padding: 18px;
+    spacing: 16px;
+    children: [inputbar, listview];
+}
+
+inputbar {
+    children: [prompt, entry];
+    background-color: @panel-alt;
+    background-image: url("~/.cache/rofi/current-wallpaper-blur.png", width);
+    background-image-horizontal-align: 0.5;
+    background-image-vertical-align: 0.5;
+    border: 1px;
+    border-color: @border-col;
+    border-radius: 6px;
+    padding: 14px 16px;
+    spacing: 10px;
+}
+
+prompt {
+    background-color: transparent;
+    border: 0px;
+    padding: 0px;
+    text-color: @text;
+    font: "JetBrainsMono Nerd Font Bold 12";
+    str: "Apps ::";
+}
+
+entry {
+    background-color: transparent;
+    border: 0px;
+    padding: 0px;
+    margin: 0px;
+    text-color: @text;
+    placeholder: "Поиск...";
+    placeholder-color: @muted;
+    cursor: text;
+    font: "JetBrainsMono Nerd Font 12";
+}
+
+listview {
+    background-color: transparent;
+    border: 0px;
+    padding: 0px;
+    columns: 1;
+    lines: 8;
+    spacing: 4px;
+    cycle: false;
+    dynamic: true;
+}
+
+element {
+    background-color: transparent;
+    border: 0px;
+    border-radius: 6px;
+    padding: 10px 12px;
+    spacing: 10px;
+    text-color: @text;
+    children: [element-icon, element-text];
+}
+
+element-text {
+    background-color: transparent;
+    text-color: inherit;
+    highlight: None;
+    vertical-align: 0.5;
+    font: "JetBrainsMono Nerd Font 12";
+}
+
+element-text selected {
+    text-color: @accent-text;
+}
+
+element-icon {
+    background-color: transparent;
+    size: 24px;
+    vertical-align: 0.5;
+}
+
+element selected {
+    background-color: @accent;
+    text-color: @accent-text;
+}
+
+scrollbar {
+    width: 4px;
+    background-color: transparent;
+    border-radius: 2px;
+}
+
+handle {
+    background-color: @border-col;
+    border-radius: 2px;
+}
+
+element normal active,
+element normal urgent,
+element alternate normal,
+element alternate active,
+element alternate urgent {
+    background-color: transparent;
+}

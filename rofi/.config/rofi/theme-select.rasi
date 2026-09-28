@@ -1,0 +1,141 @@
+/**
+ * Theme Selector for i3 + Picom (Hyprdots style)
+ * Clean Card Grid Layout with Visual Previews
+ */
+
+@import "~/.cache/wal/colors-rofi-dark.rasi"
+
+configuration {
+    modi: "dmenu";
+    show-icons: true;
+    display-dmenu: "🎨 Тема:";
+    dmenu-display-format: "{name}";
+    hover-select: true;
+    me-select-entry: "";
+    me-accept-entry: "MousePrimary";
+}
+
+* {
+    font: "JetBrainsMono Nerd Font 10";
+    background-color: transparent;
+}
+
+window {
+    transparency: "real";
+    location: center;
+    anchor: center;
+    width: 900px;
+    height: 580px;
+    x-offset: 0px;
+    y-offset: 0px;
+
+    enabled: true;
+    margin: 0px;
+    padding: 0px;
+    border: 2px solid;
+    border-radius: 18px;
+    border-color: @selected-normal-background;
+    background-color: #121317e6;
+    cursor: "default";
+}
+
+mainbox {
+    enabled: true;
+    spacing: 16px;
+    margin: 0px;
+    padding: 24px;
+    background-color: transparent;
+    children: [ "inputbar", "listview" ];
+}
+
+inputbar {
+    enabled: true;
+    spacing: 12px;
+    margin: 0px 4px;
+    padding: 12px 18px;
+    border: 1px solid;
+    border-radius: 12px;
+    border-color: #ffffff15;
+    background-color: #1a1c22a0;
+    text-color: @foreground;
+    children: [ "prompt", "entry" ];
+}
+
+prompt {
+    enabled: true;
+    background-color: transparent;
+    text-color: @selected-normal-background;
+    font: "JetBrainsMono Nerd Font Bold 11";
+}
+
+entry {
+    enabled: true;
+    background-color: transparent;
+    text-color: @foreground;
+    cursor: text;
+    placeholder: "Поиск темы оформления...";
+    placeholder-color: #ffffff40;
+    font: "JetBrainsMono Nerd Font 10";
+}
+
+listview {
+    enabled: true;
+    columns: 3;
+    lines: 2;
+    cycle: true;
+    dynamic: true;
+    scrollbar: false;
+    layout: vertical;
+    reverse: false;
+    fixed-height: true;
+    fixed-columns: true;
+    spacing: 16px;
+    margin: 0px;
+    padding: 4px;
+    background-color: transparent;
+    cursor: "default";
+}
+
+element {
+    enabled: true;
+    spacing: 10px;
+    margin: 0px;
+    padding: 12px;
+    border: 1px solid;
+    border-radius: 14px;
+    border-color: #ffffff0d;
+    background-color: #18192080;
+    text-color: @foreground;
+    orientation: vertical;
+    cursor: pointer;
+}
+
+element normal.normal {
+    background-color: #18192080;
+    text-color: @foreground;
+    border-color: #ffffff0d;
+}
+
+element selected.normal {
+    background-color: #262832cc;
+    text-color: #ffffff;
+    border: 2px solid;
+    border-color: @selected-normal-background;
+}
+
+element-icon {
+    background-color: transparent;
+    size: 130px;
+    horizontal-align: 0.5;
+    vertical-align: 0.5;
+    cursor: inherit;
+}
+
+element-text {
+    background-color: transparent;
+    text-color: inherit;
+    font: "JetBrainsMono Nerd Font Bold 10";
+    horizontal-align: 0.5;
+    vertical-align: 0.5;
+    cursor: inherit;
+}
