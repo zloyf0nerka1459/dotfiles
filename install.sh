@@ -73,10 +73,12 @@ PACMAN_PACKAGES=(
     nm-connection-editor
     polkit-kde-agent
     xsettingsd
+    spice-vdagent
 )
 
 log "Проверка и установка зависимостей..."
 sudo pacman -S --needed --noconfirm "${PACMAN_PACKAGES[@]}"
+sudo systemctl enable --now spice-vdagentd 2>/dev/null || true
 
 title "Установка AUR пакетов"
 AUR_PACKAGES=(

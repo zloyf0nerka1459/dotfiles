@@ -138,6 +138,7 @@ exec --no-startup-id ~/.config/i3/scripts/software/polkit-agent.sh
 # exec --no-startup-id greenclip daemon  # Отключено: используется CopyQ (биндится на $mod+c)
 exec --no-startup-id dunst
 exec --no-startup-id copyq
+exec_always --no-startup-id command -v spice-vdagent >/dev/null 2>&1 && pgrep -x spice-vdagent >/dev/null || spice-vdagent
 exec --no-startup-id nm-applet
 
 # 4. Утилиты интерфейса (запускаются ПОСЛЕ настройки мониторов)
