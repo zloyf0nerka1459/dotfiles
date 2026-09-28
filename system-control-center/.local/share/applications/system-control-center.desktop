@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Параметры системы
+GenericName=Центр управления
+Comment=Настройка параметров системы, мыши, клавиатуры, дисплеев и тем оформления в стиле KDE Plasma
+Exec=sh -c '"$HOME/.config/system-control-center/launch.sh"'
+Icon=preferences-system
+Terminal=false
+Categories=Settings;HardwareSettings;DesktopSettings;
+Keywords=settings;mouse;keyboard;display;theme;picom;control;параметры;настройки;мышь;клавиатура;

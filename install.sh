@@ -63,6 +63,7 @@ PACMAN_PACKAGES=(
     jq
     imagemagick
     python
+    python-gobject
     python-pillow
     ttf-jetbrains-mono-nerd
     noto-fonts-emoji
@@ -101,7 +102,7 @@ done
 
 # 3. Backup existing configs
 title "Резервное копирование существующих конфигураций"
-STOW_PACKAGES=(i3 eww picom kitty rofi dunst themes wal starship gtk bin xorg)
+STOW_PACKAGES=(i3 eww picom kitty rofi dunst themes wal starship gtk bin xorg system-control-center)
 mkdir -p "$BACKUP_DIR"
 
 backup_if_needed() {
@@ -124,6 +125,7 @@ backup_if_needed "$HOME/.config/starship.toml"
 backup_if_needed "$HOME/.config/gtk-3.0"
 backup_if_needed "$HOME/.config/xsettingsd"
 backup_if_needed "$HOME/.Xresources"
+backup_if_needed "$HOME/.config/system-control-center"
 
 # 4. Deploy via GNU Stow
 title "Связывание конфигураций через GNU Stow"
@@ -141,6 +143,7 @@ chmod +x "$HOME/.config/i3/scripts/hardware/"* 2>/dev/null || true
 chmod +x "$HOME/.config/eww/launch.sh" 2>/dev/null || true
 chmod +x "$HOME/.config/eww/scripts/"* 2>/dev/null || true
 chmod +x "$HOME/.local/bin/"* 2>/dev/null || true
+chmod +x "$HOME/.config/system-control-center/"* 2>/dev/null || true
 
 # 5. Xorg System Tweaks
 title "Применение системных настроек Xorg"

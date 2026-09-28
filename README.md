@@ -42,6 +42,7 @@
 | **`Mod + C`** | Менеджер буфера обмена **CopyQ** |
 | **`Mod + P`** | Игровой режим (вкл/выкл композитор **Picom**) |
 | **`Mod + F1`** | Шпаргалка всех хоткеев в Rofi |
+| **`Mod + ,`** | **Параметры системы** (Центр управления в стиле KDE: мышь, экран, клавиатура) |
 | **`Mod + Space`** | Переключение раскладки клавиатуры (US / RU) |
 | **`Print`** | Скриншот текущего экрана в буфер и файл |
 | **`Shift + Print`** | Скриншот выделенной области |
@@ -84,19 +85,20 @@ theme-create ~/Pictures/wall.jpg
 
 ```text
 dotfiles/
-├── i3/         -> ~/.config/i3/
-├── eww/        -> ~/.config/eww/
-├── picom/      -> ~/.config/picom/
-├── kitty/      -> ~/.config/kitty/
-├── rofi/       -> ~/.config/rofi/
-├── dunst/      -> ~/.config/dunst/
-├── themes/     -> ~/.config/themes/
-├── wal/        -> ~/.config/wal/
-├── starship/   -> ~/.config/starship.toml
-├── gtk/        -> ~/.config/gtk-3.0/, ~/.config/xsettingsd/
-├── xorg/       -> ~/.Xresources
-├── system/     -> /etc/X11/xorg.conf.d/ (системные твики Xorg)
-├── bin/        -> ~/.local/bin/
-├── install.sh  # Универсальный установщик
+├── i3/                     -> ~/.config/i3/
+├── eww/                    -> ~/.config/eww/
+├── picom/                  -> ~/.config/picom/
+├── kitty/                  -> ~/.config/kitty/
+├── rofi/                   -> ~/.config/rofi/
+├── dunst/                  -> ~/.config/dunst/
+├── themes/                 -> ~/.config/themes/
+├── wal/                    -> ~/.config/wal/
+├── starship/               -> ~/.config/starship.toml
+├── gtk/                    -> ~/.config/gtk-3.0/, ~/.config/xsettingsd/
+├── xorg/                   -> ~/.Xresources
+├── system-control-center/  -> ~/.config/system-control-center/, applications/
+├── system/                 -> /etc/X11/xorg.conf.d/ (системные твики Xorg)
+├── bin/                    -> ~/.local/bin/
+├── install.sh              # Универсальный установщик
 └── README.md
 ```
