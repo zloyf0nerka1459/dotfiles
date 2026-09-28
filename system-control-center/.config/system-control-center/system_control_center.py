@@ -20,8 +20,9 @@ from typing import Any
 import gi
 
 gi.require_version("Gdk", "3.0")
+gi.require_version("GdkPixbuf", "2.0")
 gi.require_version("Gtk", "3.0")
-from gi.repository import Gdk, GLib, Gtk
+from gi.repository import Gdk, GdkPixbuf, GLib, Gtk
 
 HOME = Path.home()
 CONFIG_HOME = HOME / ".config"
@@ -208,6 +209,12 @@ viewport {{
     background-color: {p['surface_container_highest']};
     border-color: {p['primary']};
     box-shadow: 0 0 0 1px {p['primary']};
+}}
+
+.m3-search image,
+.m3-search image.left {{
+    margin-right: 12px;
+    margin-left: 2px;
 }}
 
 /* M3 Drawer Category Section Headers (Overlines) */
@@ -632,6 +639,29 @@ def remove_class(widget: Gtk.Widget, *classes: str) -> Gtk.Widget:
 def ensure_dirs() -> None:
     for path in (CONFIG_HOME, DATA_DIR, BACKUPS_DIR, AUTOSTART_DIR):
         path.mkdir(parents=True, exist_ok=True)
+
+def create_app_icon_widget(icon_name_or_path: str, size: int = 24) -> Gtk.Widget:
+    if icon_name_or_path:
+        p = Path(icon_name_or_path)
+        if p.is_file():
+            try:
+                pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(str(p), size, size, True)
+                return Gtk.Image.new_from_pixbuf(pixbuf)
+            except Exception:
+                pass
+        for ext in ["", ".png", ".svg", ".xpm"]:
+            pix_p = Path("/usr/share/pixmaps") / f"{icon_name_or_path}{ext}"
+            if pix_p.is_file():
+                try:
+                    pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(str(pix_p), size, size, True)
+                    return Gtk.Image.new_from_pixbuf(pixbuf)
+                except Exception:
+                    pass
+        clean_name = icon_name_or_path.removesuffix(".png").removesuffix(".svg")
+        theme = Gtk.IconTheme.get_default()
+        if clean_name and theme.has_icon(clean_name):
+            return Gtk.Image.new_from_icon_name(clean_name, Gtk.IconSize.LARGE_TOOLBAR)
+    return Gtk.Image.new_from_icon_name("application-x-executable-symbolic", Gtk.IconSize.LARGE_TOOLBAR)
 
 def run_command(command: list[str], check: bool = False) -> subprocess.CompletedProcess[str]:
     return subprocess.run(command, text=True, capture_output=True, check=check)
@@ -1198,7 +1228,41 @@ def apply_cursor_theme_systemwide(theme_id: str, size: int) -> tuple[bool, str]:
         out_prof.append(f'export XCURSOR_SIZE="{size}"')
         xprof.write_text("\n".join(out_prof) + "\n", encoding="utf-8")
 
-        # 8. Environment & Live X11/D-Bus updates
+        # 8. Qt & KDE globals (~/.config/kdeglobals and ~/.config/kcminputrc)
+        def update_kde_mouse(ini_path: Path) -> None:
+            ini_path.parent.mkdir(parents=True, exist_ok=True)
+            kcp = configparser.ConfigParser(interpolation=None)
+            kcp.optionxform = str
+            if ini_path.exists():
+                try:
+                    kcp.read(ini_path, encoding="utf-8")
+                except Exception:
+                    pass
+            if "Mouse" not in kcp:
+                kcp["Mouse"] = {}
+            kcp["Mouse"]["cursorTheme"] = theme_id
+            kcp["Mouse"]["cursorSize"] = str(size)
+            try:
+                with open(ini_path, "w", encoding="utf-8") as f:
+                    kcp.write(f, space_around_delimiters=False)
+            except Exception:
+                pass
+
+        update_kde_mouse(CONFIG_HOME / "kdeglobals")
+        update_kde_mouse(CONFIG_HOME / "kcminputrc")
+
+        # 9. Systemd User Environment (~/.config/environment.d/10-cursor.conf)
+        env_d = CONFIG_HOME / "environment.d"
+        env_d.mkdir(parents=True, exist_ok=True)
+        try:
+            (env_d / "10-cursor.conf").write_text(
+                f"XCURSOR_THEME={theme_id}\nXCURSOR_SIZE={size}\n",
+                encoding="utf-8"
+            )
+        except Exception:
+            pass
+
+        # 10. Environment & Live X11/D-Bus updates
         os.environ["XCURSOR_THEME"] = theme_id
         os.environ["XCURSOR_SIZE"] = str(size)
 
@@ -1381,13 +1445,30 @@ def get_autostart_desktop_apps() -> list[dict[str, Any]]:
         for p in sorted(AUTOSTART_DIR.glob("*.desktop")):
             try:
                 cp = configparser.ConfigParser(interpolation=None)
+                cp.optionxform = str
                 cp.read(p, encoding="utf-8")
-                if "Desktop Entry" in cp:
-                    sec = cp["Desktop Entry"]
-                    name = sec.get("Name", p.stem)
-                    cmd = sec.get("Exec", "")
-                    hidden = sec.getboolean("Hidden", fallback=False)
-                    gnome = sec.getboolean("X-GNOME-Autostart-enabled", fallback=True)
+                sec_name = "Desktop Entry"
+                if sec_name not in cp:
+                    for s in cp.sections():
+                        if s.lower() == "desktop entry":
+                            sec_name = s
+                            break
+                if sec_name in cp:
+                    sec = cp[sec_name]
+                    name = sec.get("Name") or sec.get("name") or p.stem
+                    cmd = sec.get("Exec") or sec.get("exec") or ""
+                    icon = sec.get("Icon") or sec.get("icon") or ""
+                    comment = sec.get("Comment") or sec.get("comment") or ""
+                    hidden = False
+                    for hk in ["Hidden", "hidden"]:
+                        if hk in sec:
+                            hidden = sec.getboolean(hk, fallback=False)
+                            break
+                    gnome = True
+                    for gk in ["X-GNOME-Autostart-enabled", "x-gnome-autostart-enabled"]:
+                        if gk in sec:
+                            gnome = sec.getboolean(gk, fallback=True)
+                            break
                     enabled = (not hidden) and gnome
                     proc_key = cmd.split()[0] if cmd else name
                     proc_key = Path(proc_key).name
@@ -1396,6 +1477,8 @@ def get_autostart_desktop_apps() -> list[dict[str, Any]]:
                         "path": p,
                         "name": name,
                         "exec": cmd,
+                        "icon": icon,
+                        "comment": comment,
                         "enabled": enabled,
                         "running": running,
                         "proc_key": proc_key,
@@ -1407,11 +1490,36 @@ def get_autostart_desktop_apps() -> list[dict[str, Any]]:
 def set_autostart_desktop_app_enabled(path: Path, enabled: bool) -> None:
     try:
         cp = configparser.ConfigParser(interpolation=None)
+        cp.optionxform = str
         cp.read(path, encoding="utf-8")
-        if "Desktop Entry" not in cp:
-            cp["Desktop Entry"] = {}
-        cp["Desktop Entry"]["Hidden"] = "false" if enabled else "true"
-        cp["Desktop Entry"]["X-GNOME-Autostart-enabled"] = "true" if enabled else "false"
+        sec_name = "Desktop Entry"
+        if sec_name not in cp:
+            for s in cp.sections():
+                if s.lower() == "desktop entry":
+                    sec_name = s
+                    break
+        if sec_name not in cp:
+            cp[sec_name] = {}
+
+        # Normalize key casing to comply with Desktop Entry Specification
+        if "Type" not in cp[sec_name] and "type" in cp[sec_name]:
+            cp[sec_name]["Type"] = cp[sec_name].pop("type")
+        elif "Type" not in cp[sec_name]:
+            cp[sec_name]["Type"] = "Application"
+        if "Name" not in cp[sec_name] and "name" in cp[sec_name]:
+            cp[sec_name]["Name"] = cp[sec_name].pop("name")
+        if "Exec" not in cp[sec_name] and "exec" in cp[sec_name]:
+            cp[sec_name]["Exec"] = cp[sec_name].pop("exec")
+        if "Icon" not in cp[sec_name] and "icon" in cp[sec_name]:
+            cp[sec_name]["Icon"] = cp[sec_name].pop("icon")
+
+        cp[sec_name]["Hidden"] = "false" if enabled else "true"
+        cp[sec_name]["X-GNOME-Autostart-enabled"] = "true" if enabled else "false"
+        if "hidden" in cp[sec_name]:
+            del cp[sec_name]["hidden"]
+        if "x-gnome-autostart-enabled" in cp[sec_name]:
+            del cp[sec_name]["x-gnome-autostart-enabled"]
+
         with open(path, "w", encoding="utf-8") as f:
             cp.write(f, space_around_delimiters=False)
     except Exception:
@@ -1424,7 +1532,7 @@ def delete_autostart_desktop_app(path: Path) -> None:
     except Exception:
         pass
 
-def add_autostart_desktop_app(name: str, exec_cmd: str, comment: str = "") -> Path | None:
+def add_autostart_desktop_app(name: str, exec_cmd: str, comment: str = "", icon: str = "") -> Path | None:
     AUTOSTART_DIR.mkdir(parents=True, exist_ok=True)
     slug = re.sub(r"[^\w\-]+", "_", name.lower()).strip("_") or "custom_app"
     target = AUTOSTART_DIR / f"{slug}.desktop"
@@ -1432,12 +1540,13 @@ def add_autostart_desktop_app(name: str, exec_cmd: str, comment: str = "") -> Pa
     while target.exists():
         target = AUTOSTART_DIR / f"{slug}_{idx}.desktop"
         idx += 1
+    icon_line = f"Icon={icon}\n" if icon else "Icon=application-x-executable\n"
     content = f"""[Desktop Entry]
 Type=Application
 Name={name}
 Comment={comment or name}
 Exec={exec_cmd}
-Hidden=false
+{icon_line}Hidden=false
 Terminal=false
 X-GNOME-Autostart-enabled=true
 """
@@ -1447,27 +1556,58 @@ X-GNOME-Autostart-enabled=true
     except Exception:
         return None
 
-def list_installed_system_apps() -> list[tuple[str, str, str]]:
-    apps: list[tuple[str, str, str]] = []
+def list_installed_system_apps() -> list[dict[str, str]]:
+    apps: list[dict[str, str]] = []
     seen: set[str] = set()
-    for d in [Path("/usr/share/applications"), HOME / ".local/share/applications"]:
+    search_dirs = [
+        HOME / ".local/share/applications",
+        Path("/usr/local/share/applications"),
+        Path("/usr/share/applications"),
+        Path("/var/lib/flatpak/exports/share/applications"),
+        HOME / ".local/share/flatpak/exports/share/applications",
+    ]
+    for d in search_dirs:
         if d.is_dir():
             for p in sorted(d.glob("*.desktop")):
                 try:
                     cp = configparser.ConfigParser(interpolation=None)
+                    cp.optionxform = str
                     cp.read(p, encoding="utf-8")
-                    if "Desktop Entry" in cp:
-                        sec = cp["Desktop Entry"]
-                        name = sec.get("Name")
-                        cmd = sec.get("Exec")
-                        nodisplay = sec.getboolean("NoDisplay", fallback=False)
-                        if name and cmd and not nodisplay and name not in seen:
-                            seen.add(name)
+                    sec_name = "Desktop Entry"
+                    if sec_name not in cp:
+                        for s in cp.sections():
+                            if s.lower() == "desktop entry":
+                                sec_name = s
+                                break
+                    if sec_name in cp:
+                        sec = cp[sec_name]
+                        nodisplay = False
+                        for nd_key in ["NoDisplay", "nodisplay"]:
+                            if nd_key in sec:
+                                nodisplay = sec.getboolean(nd_key, fallback=False)
+                                break
+                        if nodisplay:
+                            continue
+
+                        name = sec.get("Name") or sec.get("name")
+                        cmd = sec.get("Exec") or sec.get("exec")
+                        icon = sec.get("Icon") or sec.get("icon") or "application-x-executable"
+                        comment = sec.get("Comment") or sec.get("comment") or sec.get("GenericName") or sec.get("genericname") or ""
+
+                        if name and cmd and name.strip() not in seen:
+                            clean_name = name.strip()
+                            seen.add(clean_name)
                             clean_cmd = " ".join([arg for arg in cmd.split() if not (arg.startswith("%") and len(arg) == 2)])
-                            apps.append((name, clean_cmd, p.stem))
+                            apps.append({
+                                "name": clean_name,
+                                "exec": clean_cmd,
+                                "icon": icon.strip(),
+                                "comment": comment.strip(),
+                                "id": p.stem,
+                            })
                 except Exception:
                     pass
-    return sorted(apps, key=lambda x: x[0].lower())
+    return sorted(apps, key=lambda x: x["name"].lower())
 
 def get_i3_autostart_status(pattern: str) -> bool:
     if not I3_CONFIG_PATH.exists():
@@ -1676,7 +1816,7 @@ class ControlCenterWindow(Gtk.Window):
         # M3 Search Bar
         self.search_entry = Gtk.SearchEntry()
         add_class(self.search_entry, "m3-search")
-        self.search_entry.set_placeholder_text("Поиск параметров...")
+        self.search_entry.set_placeholder_text("  Поиск параметров...")
         self.search_entry.connect("search-changed", self.on_search_changed)
         box.pack_start(self.search_entry, False, False, 0)
 
@@ -2803,7 +2943,8 @@ class ControlCenterWindow(Gtk.Window):
             row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=14)
             add_class(row, "card-row")
 
-            icon_img = Gtk.Image.new_from_icon_name("application-x-executable-symbolic", Gtk.IconSize.MENU)
+            icon_img = create_app_icon_widget(app.get("icon", ""), size=24)
+            icon_img.set_valign(Gtk.Align.CENTER)
             row.pack_start(icon_img, False, False, 0)
 
             tbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
@@ -3036,64 +3177,139 @@ class ControlCenterWindow(Gtk.Window):
             modal=True,
             destroy_with_parent=True,
         )
-        dialog.set_default_size(520, 360)
+        dialog.set_default_size(440, 480)
         add_class(dialog, "control-center-window")
 
         content_area = dialog.get_content_area()
         add_class(content_area, "content-area")
-        content_area.set_spacing(16)
+        content_area.set_spacing(12)
 
         d_title = Gtk.Label(label="Добавить программу", xalign=0)
         add_class(d_title, "page-title")
         content_area.pack_start(d_title, False, False, 0)
 
-        d_sub = Gtk.Label(label="Выберите установленную программу или укажите название и команду вручную.", xalign=0)
+        d_sub = Gtk.Label(label="Выберите приложение для автозапуска или найдите его через поиск.", xalign=0)
         add_class(d_sub, "card-row-subtitle")
         d_sub.set_line_wrap(True)
         content_area.pack_start(d_sub, False, False, 0)
 
-        form_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
-        add_class(form_box, "card")
-        content_area.pack_start(form_box, True, True, 0)
+        # Search bar
+        search_bar = Gtk.SearchEntry()
+        add_class(search_bar, "m3-search")
+        search_bar.set_placeholder_text("  Поиск установленных программ...")
+        content_area.pack_start(search_bar, False, False, 0)
 
-        combo_lbl = Gtk.Label(label="Установленная программа:", xalign=0)
-        add_class(combo_lbl, "card-row-subtitle")
-        form_box.pack_start(combo_lbl, False, False, 0)
+        # App List in ScrolledWindow
+        scrolled = Gtk.ScrolledWindow()
+        scrolled.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
+        scrolled.set_min_content_height(240)
+        scrolled.set_max_content_height(280)
+        add_class(scrolled, "card")
 
-        apps_combo = Gtk.ComboBoxText()
+        listbox = Gtk.ListBox()
+        listbox.set_selection_mode(Gtk.SelectionMode.SINGLE)
+        listbox.set_activate_on_single_click(True)
+        scrolled.add(listbox)
+        content_area.pack_start(scrolled, True, True, 0)
+
         installed_apps = list_installed_system_apps()
-        apps_combo.append_text("— Выбрать из списка программ —")
-        for app_name, _, _ in installed_apps:
-            apps_combo.append_text(app_name)
-        apps_combo.set_active(0)
-        form_box.pack_start(apps_combo, False, False, 0)
 
-        name_lbl = Gtk.Label(label="Название приложения:", xalign=0)
-        add_class(name_lbl, "card-row-subtitle")
-        name_entry = Gtk.Entry()
-        name_entry.set_placeholder_text("Например: Zen Browser")
-        form_box.pack_start(name_lbl, False, False, 0)
-        form_box.pack_start(name_entry, False, False, 0)
+        # Populate rows
+        app_rows: list[tuple[Gtk.ListBoxRow, dict[str, str]]] = []
+        for app in installed_apps:
+            row = Gtk.ListBoxRow()
+            add_class(row, "card-row")
 
-        cmd_lbl = Gtk.Label(label="Команда запуска:", xalign=0)
-        add_class(cmd_lbl, "card-row-subtitle")
-        cmd_entry = Gtk.Entry()
-        cmd_entry.set_placeholder_text("Например: zen-browser")
-        form_box.pack_start(cmd_lbl, False, False, 0)
-        form_box.pack_start(cmd_entry, False, False, 0)
+            hbox = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
+            icon_w = create_app_icon_widget(app.get("icon", ""), size=24)
+            icon_w.set_valign(Gtk.Align.CENTER)
+            hbox.pack_start(icon_w, False, False, 0)
 
-        def on_combo_changed(combo: Gtk.ComboBoxText) -> None:
-            idx = combo.get_active()
-            if idx > 0 and idx <= len(installed_apps):
-                sel_name, sel_cmd, _ = installed_apps[idx - 1]
-                name_entry.set_text(sel_name)
-                cmd_entry.set_text(sel_cmd)
+            tbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
+            tbox.set_valign(Gtk.Align.CENTER)
+            nl = Gtk.Label(label=app["name"], xalign=0)
+            add_class(nl, "card-row-title")
+            sub_text = app["comment"] or app["exec"]
+            if len(sub_text) > 42:
+                sub_text = sub_text[:39] + "..."
+            sl = Gtk.Label(label=sub_text, xalign=0)
+            add_class(sl, "card-row-subtitle")
+            tbox.pack_start(nl, False, False, 0)
+            tbox.pack_start(sl, False, False, 0)
+            hbox.pack_start(tbox, True, True, 0)
 
-        apps_combo.connect("changed", on_combo_changed)
+            add_action_btn = Gtk.Button(label="Добавить")
+            add_class(add_action_btn, "btn-tonal")
+            add_action_btn.set_valign(Gtk.Align.CENTER)
+            hbox.pack_end(add_action_btn, False, False, 0)
 
-        dialog.add_button("Отмена", Gtk.ResponseType.CANCEL)
-        add_btn = dialog.add_button("Добавить", Gtk.ResponseType.OK)
-        add_class(add_btn, "btn-primary")
+            row.add(hbox)
+            listbox.add(row)
+            app_rows.append((row, app))
+
+        # Filter function
+        def filter_func(row: Gtk.ListBoxRow) -> bool:
+            query = search_bar.get_text().strip().lower()
+            if not query:
+                return True
+            for r, a in app_rows:
+                if r == row:
+                    return query in a["name"].lower() or query in a["exec"].lower() or query in a.get("comment", "").lower()
+            return True
+
+        listbox.set_filter_func(filter_func)
+        search_bar.connect("search-changed", lambda _w: listbox.invalidate_filter())
+
+        # Manual expander
+        expander = Gtk.Expander(label="Указать команду вручную...")
+        manual_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
+        manual_box.set_margin_top(6)
+        manual_box.set_margin_bottom(6)
+
+        m_name_entry = Gtk.Entry()
+        m_name_entry.set_placeholder_text("Название (например: My Custom Script)")
+        m_cmd_entry = Gtk.Entry()
+        m_cmd_entry.set_placeholder_text("Команда (например: ~/scripts/my-service.sh)")
+
+        manual_box.pack_start(m_name_entry, False, False, 0)
+        manual_box.pack_start(m_cmd_entry, False, False, 0)
+        expander.add(manual_box)
+        content_area.pack_start(expander, False, False, 0)
+
+        # Dialog Buttons
+        dialog.add_button("Закрыть", Gtk.ResponseType.CANCEL)
+        manual_add_btn = dialog.add_button("Добавить команду", Gtk.ResponseType.OK)
+        add_class(manual_add_btn, "btn-primary")
+        manual_add_btn.set_sensitive(False)
+
+        def on_manual_text_changed(_w: Gtk.Entry) -> None:
+            can_add = bool(m_name_entry.get_text().strip() and m_cmd_entry.get_text().strip())
+            manual_add_btn.set_sensitive(can_add)
+
+        m_name_entry.connect("changed", on_manual_text_changed)
+        m_cmd_entry.connect("changed", on_manual_text_changed)
+
+        selected_app_to_add: dict[str, str] | None = None
+
+        def add_and_close(app_data: dict[str, str]) -> None:
+            nonlocal selected_app_to_add
+            selected_app_to_add = app_data
+            dialog.response(Gtk.ResponseType.APPLY)
+
+        def on_row_activated(_lb: Gtk.ListBox, activated_row: Gtk.ListBoxRow) -> None:
+            for r, a in app_rows:
+                if r == activated_row:
+                    add_and_close(a)
+                    break
+
+        listbox.connect("row-activated", on_row_activated)
+
+        for r, a in app_rows:
+            hbox = r.get_child()
+            if isinstance(hbox, Gtk.Box):
+                children = hbox.get_children()
+                if children and isinstance(children[-1], Gtk.Button):
+                    children[-1].connect("clicked", lambda _b, app_item=a: add_and_close(app_item))
 
         cancel_btn = dialog.get_widget_for_response(Gtk.ResponseType.CANCEL)
         if cancel_btn:
@@ -3101,13 +3317,24 @@ class ControlCenterWindow(Gtk.Window):
 
         dialog.show_all()
         response = dialog.run()
-        if response == Gtk.ResponseType.OK:
-            name = name_entry.get_text().strip()
-            cmd = cmd_entry.get_text().strip()
+
+        if response == Gtk.ResponseType.APPLY and selected_app_to_add:
+            add_autostart_desktop_app(
+                selected_app_to_add["name"],
+                selected_app_to_add["exec"],
+                selected_app_to_add.get("comment", ""),
+                selected_app_to_add.get("icon", ""),
+            )
+            self.populate_autostart_apps()
+            self.set_status(f"Приложение «{selected_app_to_add['name']}» добавлено в автозапуск")
+        elif response == Gtk.ResponseType.OK:
+            name = m_name_entry.get_text().strip()
+            cmd = m_cmd_entry.get_text().strip()
             if name and cmd:
                 add_autostart_desktop_app(name, cmd)
                 self.populate_autostart_apps()
                 self.set_status(f"Приложение «{name}» добавлено в автозапуск")
+
         dialog.destroy()
 
     # --------------------------------------------------------------------------
