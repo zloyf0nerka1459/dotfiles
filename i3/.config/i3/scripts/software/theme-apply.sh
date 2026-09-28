@@ -116,9 +116,14 @@ elif command -v eww >/dev/null 2>&1; then
     eww reload >/dev/null 2>&1 || true
 fi
 
-# 7. Update xsettingsd for GTK apps
+# 7. Update GTK theme (FlatColor) with new theme colors and reload xsettingsd
+if [ -x "$HOME/.config/i3/scripts/software/update-gtk-theme.py" ]; then
+    "$HOME/.config/i3/scripts/software/update-gtk-theme.py" >/dev/null 2>&1 || true
+fi
+
 if command -v xsettingsd >/dev/null 2>&1; then
     killall xsettingsd 2>/dev/null || true
+    sleep 0.1
     xsettingsd >/dev/null 2>&1 &
 fi
 
