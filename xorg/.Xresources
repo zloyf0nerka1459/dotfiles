@@ -13,6 +13,6 @@ Xft.lcdfilter:  lcddefault
 Xft.dpi:        96
 
 ! === Xcursor Settings ===
-Xcursor.theme:      Bibata-Modern-Classic
+Xcursor.theme:      clay
 Xcursor.size:       24
 Xcursor.theme_core: true
