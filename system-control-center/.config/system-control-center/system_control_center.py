@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # ==============================================================================
-# i3wm / X11 System Control Center (Параметры системы в стиле KDE Plasma)
+# System Control Center — Material Design 3 (Google M3)
+# Specification: https://m3.material.io/
 # ==============================================================================
 
 import json
@@ -10,7 +11,6 @@ import re
 import shutil
 import subprocess
 from dataclasses import dataclass
-from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -32,236 +32,318 @@ LAUNCHER_SCRIPT_PATH = DATA_DIR / "launch.sh"
 THEMES_DIR = CONFIG_HOME / "themes"
 XRESOURCES_PATH = HOME / ".Xresources"
 
-APPLICATION_DIRS = [
-    HOME / ".local" / "share" / "applications",
-    Path("/usr/local/share/applications"),
-    Path("/usr/share/applications"),
-]
-
-BACKUP_TARGETS = [
-    "i3",
-    "autostart",
-    "picom",
-    "dunst",
-    "rofi",
-    "gtk-3.0",
-    "xsettingsd",
-    "themes",
-    "wal",
-    "system-control-center",
-]
-
 # ==============================================================================
-# CSS Styling (KDE Breeze Dark / Plasma 6 Aesthetic)
+# Material Design 3 (M3) CSS Tokens & Rules
 # ==============================================================================
 APP_CSS = """
+/* Material Design 3 Baseline Dark Palette */
 window.control-center-window {
-    background-color: #16181d;
-    color: #e3e6ea;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Inter", "Noto Sans", sans-serif;
+    background-color: #111318;
+    color: #e2e2e9;
+    font-family: "Noto Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
 
+/* --- M3 Navigation Drawer / Sidebar --- */
 .sidebar {
-    background-color: #121418;
-    border-right: 1px solid rgba(255, 255, 255, 0.08);
-    padding: 12px 10px;
+    background-color: #111318;
+    border-right: 1px solid #282a2f;
+    padding: 16px 12px;
 }
 
 .sidebar-title {
-    font-size: 17px;
-    font-weight: 800;
-    color: #ffffff;
-    margin-left: 8px;
-    margin-top: 4px;
+    font-size: 20px;
+    font-weight: 700;
+    color: #e2e2e9;
+    margin-left: 14px;
+    margin-bottom: 2px;
 }
 
 .sidebar-subtitle {
-    font-size: 11px;
-    color: #8b929c;
-    margin-left: 8px;
-    margin-bottom: 12px;
+    font-size: 12px;
+    color: #8e9099;
+    margin-left: 14px;
+    margin-bottom: 16px;
+}
+
+/* M3 Search Bar */
+.m3-search {
+    background-color: #282a2f;
+    color: #e2e2e9;
+    border-radius: 9999px;
+    border: none;
+    padding: 10px 18px;
+    font-size: 13px;
+    margin-bottom: 14px;
+}
+
+.m3-search:focus {
+    background-color: #33353a;
+    box-shadow: inset 0 0 0 1px #a8c7fa;
 }
 
 .sidebar-category {
     font-size: 11px;
     font-weight: 700;
-    color: #64748b;
-    padding: 10px 10px 4px 10px;
+    color: #a8c7fa;
+    padding: 14px 14px 6px 14px;
 }
 
+/* M3 Navigation Pill */
 .sidebar-item {
-    padding: 8px 12px;
-    border-radius: 8px;
-    color: #cbd5e1;
+    padding: 10px 18px;
+    border-radius: 9999px;
+    color: #c4c6d0;
     font-size: 13px;
     font-weight: 500;
-    transition: all 120ms ease;
-    border: 1px solid transparent;
+    margin-bottom: 2px;
+    background-color: transparent;
+    transition: background-color 150ms ease, color 150ms ease;
 }
 
 .sidebar-item:hover {
-    background-color: rgba(255, 255, 255, 0.05);
-    color: #f8fafc;
+    background-color: rgba(226, 226, 233, 0.08);
+    color: #e2e2e9;
 }
 
 .sidebar-item.active {
-    background-color: rgba(61, 174, 233, 0.18);
-    color: #3daee9;
-    font-weight: 700;
-    border: 1px solid rgba(61, 174, 233, 0.35);
+    background-color: #004a77;
+    color: #dbe4f6;
+    font-weight: 600;
 }
 
+/* --- M3 Content Surface --- */
 .content-area {
-    padding: 24px 30px;
-    background-color: #181b20;
+    padding: 28px 36px;
+    background-color: #111318;
 }
 
 .page-header {
-    margin-bottom: 20px;
+    margin-bottom: 24px;
 }
 
 .page-title {
-    font-size: 22px;
-    font-weight: 800;
-    color: #ffffff;
+    font-size: 26px;
+    font-weight: 700;
+    color: #e2e2e9;
 }
 
 .page-subtitle {
     font-size: 13px;
-    color: #94a3b8;
-    margin-top: 2px;
+    color: #8e9099;
+    margin-top: 4px;
 }
 
+/* --- M3 Cards (Surface Container) --- */
 .card {
-    background-color: #20242a;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 12px;
-    padding: 18px 20px;
-    margin-bottom: 16px;
+    background-color: #1d2024;
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    padding: 22px 24px;
+    margin-bottom: 18px;
 }
 
 .card-title {
-    font-size: 15px;
-    font-weight: 700;
-    color: #f1f5f9;
+    font-size: 16px;
+    font-weight: 600;
+    color: #e2e2e9;
 }
 
 .card-subtitle {
-    font-size: 12px;
-    color: #94a3b8;
-    margin-top: 2px;
-    margin-bottom: 12px;
+    font-size: 13px;
+    color: #8e9099;
+    margin-top: 4px;
+    margin-bottom: 16px;
 }
 
 .card-row {
-    padding: 8px 0;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    padding: 10px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .card-row:last-child {
     border-bottom: none;
 }
 
-.badge-tag {
-    background-color: rgba(61, 174, 233, 0.15);
-    color: #3daee9;
-    border: 1px solid rgba(61, 174, 233, 0.3);
-    border-radius: 6px;
-    padding: 2px 8px;
-    font-size: 11px;
-    font-weight: 700;
+/* --- M3 Buttons --- */
+button.suggested-action,
+.btn-primary {
+    background-color: #a8c7fa;
+    color: #062e6f;
+    font-weight: 600;
+    font-size: 13px;
+    border-radius: 9999px;
+    padding: 8px 22px;
+    border: none;
+    box-shadow: none;
 }
 
-.badge-green {
-    background-color: rgba(34, 197, 94, 0.15);
-    color: #22c55e;
-    border: 1px solid rgba(34, 197, 94, 0.3);
-    border-radius: 6px;
-    padding: 2px 8px;
-    font-size: 11px;
-    font-weight: 700;
+button.suggested-action:hover,
+.btn-primary:hover {
+    background-color: #c2d7fc;
+    color: #042152;
 }
 
-.badge-amber {
-    background-color: rgba(245, 158, 11, 0.15);
-    color: #f59e0b;
-    border: 1px solid rgba(245, 158, 11, 0.3);
-    border-radius: 6px;
-    padding: 2px 8px;
-    font-size: 11px;
-    font-weight: 700;
+button,
+.btn-tonal {
+    background-color: #282a2f;
+    color: #e2e2e9;
+    font-weight: 500;
+    font-size: 13px;
+    border-radius: 9999px;
+    padding: 8px 18px;
+    border: none;
+    box-shadow: none;
 }
 
+button:hover,
+.btn-tonal:hover {
+    background-color: #33353a;
+    color: #ffffff;
+}
+
+/* --- M3 Chips & Badges --- */
+.badge-tag,
+.m3-chip {
+    background-color: #004a77;
+    color: #dbe4f6;
+    border-radius: 9999px;
+    padding: 4px 12px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.badge-green,
+.m3-chip-success {
+    background-color: rgba(46, 125, 50, 0.25);
+    color: #a5d6a7;
+    border-radius: 9999px;
+    padding: 4px 12px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.badge-amber,
+.m3-chip-warning {
+    background-color: rgba(239, 108, 0, 0.25);
+    color: #ffcc80;
+    border-radius: 9999px;
+    padding: 4px 12px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+/* --- M3 Inputs --- */
+entry {
+    background-color: #282a2f;
+    color: #e2e2e9;
+    border-radius: 8px;
+    border: 1px solid #44474f;
+    padding: 8px 12px;
+}
+
+entry:focus {
+    border-color: #a8c7fa;
+    background-color: #33353a;
+}
+
+combobox button.combo {
+    background-color: #282a2f;
+    color: #e2e2e9;
+    border-radius: 8px;
+    border: 1px solid #44474f;
+    padding: 6px 12px;
+}
+
+/* --- M3 Switch --- */
+switch {
+    border-radius: 9999px;
+    background-color: #33353a;
+    border: 1px solid #44474f;
+    min-width: 48px;
+    min-height: 26px;
+}
+
+switch:checked {
+    background-color: #a8c7fa;
+    border-color: #a8c7fa;
+}
+
+switch slider {
+    border-radius: 9999px;
+    background-color: #8e9099;
+    min-width: 20px;
+    min-height: 20px;
+}
+
+switch:checked slider {
+    background-color: #062e6f;
+}
+
+/* --- M3 Sliders --- */
+scale trough {
+    background-color: #33353a;
+    border-radius: 9999px;
+    min-height: 8px;
+}
+
+scale highlight {
+    background-color: #a8c7fa;
+    border-radius: 9999px;
+}
+
+scale slider {
+    background-color: #a8c7fa;
+    border-radius: 9999px;
+    min-width: 18px;
+    min-height: 18px;
+}
+
+/* --- M3 Test Pad --- */
 .test-pad {
-    background-color: #14161a;
-    border: 2px dashed rgba(255, 255, 255, 0.12);
-    border-radius: 10px;
+    background-color: #191c20;
+    border: 1px solid #44474f;
+    border-radius: 16px;
     padding: 24px;
-    transition: all 150ms ease;
 }
 
 .test-pad:hover {
-    border-color: rgba(61, 174, 233, 0.4);
-    background-color: #16181d;
+    border-color: #8e9099;
+    background-color: #1d2024;
 }
 
 .mouse-btn-indicator {
-    padding: 6px 14px;
-    border-radius: 8px;
+    padding: 6px 16px;
+    border-radius: 9999px;
     font-size: 12px;
-    font-weight: 700;
-    background-color: rgba(255, 255, 255, 0.06);
-    color: #94a3b8;
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    font-weight: 600;
+    background-color: #282a2f;
+    color: #8e9099;
 }
 
 .mouse-btn-indicator.active {
-    background-color: #3daee9;
-    color: #ffffff;
-    border-color: #3daee9;
-    box-shadow: 0 0 12px rgba(61, 174, 233, 0.5);
-}
-
-.status-bar {
-    background-color: #121418;
-    border-top: 1px solid rgba(255, 255, 255, 0.08);
-    padding: 10px 20px;
-}
-
-button.suggested-action {
-    background: linear-gradient(135deg, #3daee9 0%, #2980b9 100%);
-    color: #ffffff;
-    border: none;
-    border-radius: 8px;
-    padding: 8px 16px;
+    background-color: #a8c7fa;
+    color: #062e6f;
     font-weight: 700;
 }
 
-button.suggested-action:hover {
-    background: linear-gradient(135deg, #4fb8ee 0%, #3498db 100%);
-}
-
-button {
-    border-radius: 8px;
-    padding: 6px 14px;
-}
-
-entry, spinbutton {
-    border-radius: 8px;
-    padding: 6px 10px;
+/* Status Bar */
+.status-bar {
+    background-color: #111318;
+    border-top: 1px solid #282a2f;
+    padding: 12px 24px;
 }
 """
 
 def add_class(widget: Gtk.Widget, *classes: str) -> Gtk.Widget:
-    style_context = widget.get_style_context()
-    for item in classes:
-        style_context.add_class(item)
+    ctx = widget.get_style_context()
+    for c in classes:
+        ctx.add_class(c)
     return widget
 
 def remove_class(widget: Gtk.Widget, *classes: str) -> Gtk.Widget:
-    style_context = widget.get_style_context()
-    for item in classes:
-        style_context.remove_class(item)
+    ctx = widget.get_style_context()
+    for c in classes:
+        ctx.remove_class(c)
     return widget
 
 def load_css() -> None:
@@ -283,7 +365,7 @@ def run_command(command: list[str], check: bool = False) -> subprocess.Completed
     return subprocess.run(command, text=True, capture_output=True, check=check)
 
 # ==============================================================================
-# Data Models & System Inspect
+# Device Models & Helpers
 # ==============================================================================
 @dataclass
 class PointerDevice:
@@ -316,6 +398,7 @@ def list_pointer_devices() -> list[PointerDevice]:
             if m:
                 name = m.group(1).strip()
                 dev_id = int(m.group(2))
+                # Filter out virtual XTEST and control endpoints
                 if any(bad in name.lower() for bad in ["xtest", "consumer control", "system control"]):
                     continue
                 dev = get_pointer_device(dev_id, name)
@@ -338,15 +421,11 @@ def get_pointer_device(dev_id: int, name: str) -> PointerDevice | None:
     if "libinput Accel Speed" not in props and "libinput Natural Scrolling Enabled" not in props:
         return None
 
-    # Acceleration profile
     profile_str = props.get("libinput Accel Profile Enabled", "1, 0, 0")
-    # 0, 1, 0 -> Flat. 1, 0, 0 -> Adaptive.
     is_flat = profile_str.startswith("0, 1") or profile_str == "0 1 0"
     profile = "flat" if is_flat else "adaptive"
-
     supports_profiles = "libinput Accel Profiles Available" in props
 
-    # Accel speed
     speed = 0.0
     try:
         speed = float(props.get("libinput Accel Speed", "0.0").split()[0])
@@ -369,22 +448,16 @@ def get_pointer_device(dev_id: int, name: str) -> PointerDevice | None:
     )
 
 def apply_pointer_device(dev: PointerDevice) -> None:
-    # 1. Profile
     if dev.supports_profiles:
         profile_vals = ["0", "1", "0"] if dev.accel_profile == "flat" else ["1", "0", "0"]
         run_command(["xinput", "set-prop", str(dev.id), "libinput Accel Profile Enabled"] + profile_vals)
-    # 2. Speed
     run_command(["xinput", "set-prop", str(dev.id), "libinput Accel Speed", f"{dev.accel_speed:.2f}"])
-    # 3. Natural scrolling
     run_command(["xinput", "set-prop", str(dev.id), "libinput Natural Scrolling Enabled", "1" if dev.natural_scrolling else "0"])
-    # 4. Left handed
     run_command(["xinput", "set-prop", str(dev.id), "libinput Left Handed Enabled", "1" if dev.left_handed else "0"])
-    # 5. Middle emulation
     run_command(["xinput", "set-prop", str(dev.id), "libinput Middle Emulation Enabled", "1" if dev.middle_emulation else "0"])
 
 def save_all_input_settings(devices: list[PointerDevice], layouts: str, switch_option: str, repeat_delay: int, repeat_rate: int) -> None:
     ensure_dirs()
-    # Save JSON profiles
     data = {
         "devices": [
             {
@@ -406,11 +479,10 @@ def save_all_input_settings(devices: list[PointerDevice], layouts: str, switch_o
     }
     INPUT_PROFILE_PATH.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
 
-    # Generate apply-input-settings.sh
     lines = [
         "#!/usr/bin/env bash",
         "# ==============================================================================",
-        "# Auto-generated by System Control Center",
+        "# Auto-generated by System Control Center (Material Design 3)",
         "# ==============================================================================",
         "set -u",
         '[ -n "${DISPLAY:-}" ] || exit 0',
@@ -460,16 +532,13 @@ def save_all_input_settings(devices: list[PointerDevice], layouts: str, switch_o
 
 def get_system_specs() -> dict[str, str]:
     specs: dict[str, str] = {}
-    # OS
     specs["os"] = "Arch Linux x86_64"
-    # Kernel
     specs["kernel"] = platform.release()
-    # Uptime
     try:
         specs["uptime"] = run_command(["uptime", "-p"]).stdout.replace("up ", "").strip()
     except Exception:
         specs["uptime"] = "Неизвестно"
-    # CPU
+
     cpu_name = "Intel Core i5-10400F CPU @ 2.90GHz"
     try:
         with open("/proc/cpuinfo") as f:
@@ -480,7 +549,7 @@ def get_system_specs() -> dict[str, str]:
     except Exception:
         pass
     specs["cpu"] = cpu_name
-    # RAM
+
     ram_str = "16 GB"
     try:
         with open("/proc/meminfo") as f:
@@ -497,7 +566,7 @@ def get_system_specs() -> dict[str, str]:
     except Exception:
         pass
     specs["ram"] = ram_str
-    # GPU
+
     gpu_str = "NVIDIA GeForce GTX 1660 SUPER"
     try:
         out = run_command(["lspci"]).stdout
@@ -508,7 +577,6 @@ def get_system_specs() -> dict[str, str]:
     except Exception:
         pass
     specs["gpu"] = gpu_str
-    # Desktop
     specs["wm"] = "i3-gaps (XLibre X11 Server)"
     return specs
 
@@ -537,7 +605,6 @@ def get_connected_displays() -> list[dict[str, Any]]:
             continue
 
         if current_disp and "*" in line:
-            # e.g. 1920x1080 60.00 + 144.00*
             parts = line.split()
             for p in parts:
                 if "*" in p:
@@ -559,13 +626,21 @@ def get_current_theme() -> str:
     current_file = THEMES_DIR / "current.theme"
     if current_file.exists():
         try:
-            return current_file.read_text(encoding="utf-8").strip()
+            for line in current_file.read_text(encoding="utf-8").splitlines():
+                line = line.strip()
+                if line.startswith("NAME="):
+                    val = line.split("=", 1)[1].strip("\"' ")
+                    clean = re.sub(r"^[^\w\s]+\s*", "", val).strip()
+                    return clean or val
+                if line.startswith("WALLPAPER="):
+                    p = Path(line.split("=", 1)[1].strip("\"' "))
+                    return p.parent.name
         except Exception:
             pass
     return "ghibli-serenity"
 
 # ==============================================================================
-# Main Application Window
+# Main Application Window (Material Design 3)
 # ==============================================================================
 class ControlCenterWindow(Gtk.Window):
     def __init__(self) -> None:
@@ -587,7 +662,6 @@ class ControlCenterWindow(Gtk.Window):
         self.loading: bool = True
         self.status_lbl = Gtk.Label(label="Готово", xalign=0)
 
-        # Load saved profile if exists
         self.load_saved_profile()
 
         # Layout
@@ -597,7 +671,7 @@ class ControlCenterWindow(Gtk.Window):
         content_panes = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=0)
         main_box.pack_start(content_panes, True, True, 0)
 
-        # Left Sidebar
+        # Left Sidebar (M3 Navigation Drawer)
         self.sidebar_box = self.build_sidebar()
         content_panes.pack_start(self.sidebar_box, False, False, 0)
 
@@ -607,12 +681,12 @@ class ControlCenterWindow(Gtk.Window):
         self.stack.set_transition_duration(150)
         content_panes.pack_start(self.stack, True, True, 0)
 
-        # Build Pages
+        # Build Pages (Clean M3 — No superfluous emojis)
         self.page_mouse = self.build_mouse_page()
         self.page_keyboard = self.build_keyboard_page()
         self.page_displays = self.build_displays_page()
-        self.page_appearance = self.build_appearance_page()
         self.page_gaming = self.build_gaming_page()
+        self.page_appearance = self.build_appearance_page()
         self.page_autostart = self.build_autostart_page()
         self.page_shortcuts = self.build_shortcuts_page()
         self.page_about = self.build_about_page()
@@ -620,8 +694,8 @@ class ControlCenterWindow(Gtk.Window):
         self.stack.add_named(self.page_mouse, "mouse")
         self.stack.add_named(self.page_keyboard, "keyboard")
         self.stack.add_named(self.page_displays, "displays")
-        self.stack.add_named(self.page_appearance, "appearance")
         self.stack.add_named(self.page_gaming, "gaming")
+        self.stack.add_named(self.page_appearance, "appearance")
         self.stack.add_named(self.page_autostart, "autostart")
         self.stack.add_named(self.page_shortcuts, "shortcuts")
         self.stack.add_named(self.page_about, "about")
@@ -631,8 +705,6 @@ class ControlCenterWindow(Gtk.Window):
         main_box.pack_end(self.status_bar, False, False, 0)
 
         self.loading = False
-
-        # Set default active page
         self.select_page("mouse")
 
     def load_saved_profile(self) -> None:
@@ -648,26 +720,25 @@ class ControlCenterWindow(Gtk.Window):
                 pass
 
     # --------------------------------------------------------------------------
-    # Sidebar
+    # M3 Navigation Drawer (Sidebar)
     # --------------------------------------------------------------------------
     def build_sidebar(self) -> Gtk.Box:
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
         add_class(box, "sidebar")
-        box.set_size_request(240, -1)
+        box.set_size_request(260, -1)
 
-        # Header Title
         title = Gtk.Label(label="Параметры", xalign=0)
         add_class(title, "sidebar-title")
         box.pack_start(title, False, False, 0)
 
-        subtitle = Gtk.Label(label="Центр управления системой i3wm", xalign=0)
+        subtitle = Gtk.Label(label="Система и оборудование", xalign=0)
         add_class(subtitle, "sidebar-subtitle")
         box.pack_start(subtitle, False, False, 0)
 
-        # Search bar
+        # M3 Search Bar
         self.search_entry = Gtk.SearchEntry()
+        add_class(self.search_entry, "m3-search")
         self.search_entry.set_placeholder_text("Поиск параметров...")
-        self.search_entry.set_margin_bottom(12)
         self.search_entry.connect("search-changed", self.on_search_changed)
         box.pack_start(self.search_entry, False, False, 0)
 
@@ -676,20 +747,21 @@ class ControlCenterWindow(Gtk.Window):
         self.sidebar_list.set_selection_mode(Gtk.SelectionMode.SINGLE)
         self.sidebar_list.connect("row-selected", self.on_sidebar_row_selected)
 
+        # Strictly clean text titles (No out-of-place emojis)
         self.sidebar_items = [
             ("HEADER", "Устройства ввода", None),
-            ("ITEM", "🖱️  Мышь и тачпад", "mouse"),
-            ("ITEM", "⌨️  Клавиатура", "keyboard"),
+            ("ITEM", "Мышь и тачпад", "mouse"),
+            ("ITEM", "Клавиатура", "keyboard"),
             ("HEADER", "Оборудование и экран", None),
-            ("ITEM", "🖥️  Экраны и дисплеи", "displays"),
-            ("ITEM", "⚡  Игровой режим & Picom", "gaming"),
+            ("ITEM", "Дисплеи", "displays"),
+            ("ITEM", "Игровой режим и Picom", "gaming"),
             ("HEADER", "Персонализация", None),
-            ("ITEM", "🎨  Внешний вид и темы", "appearance"),
+            ("ITEM", "Внешний вид", "appearance"),
             ("HEADER", "Рабочая среда", None),
-            ("ITEM", "🚀  Автозапуск", "autostart"),
-            ("ITEM", "⌨️  Горячие клавиши", "shortcuts"),
+            ("ITEM", "Автозапуск", "autostart"),
+            ("ITEM", "Горячие клавиши", "shortcuts"),
             ("HEADER", "Система", None),
-            ("ITEM", "ℹ️  О системе", "about"),
+            ("ITEM", "О системе", "about"),
         ]
 
         self.sidebar_rows: dict[str, Gtk.ListBoxRow] = {}
@@ -726,8 +798,12 @@ class ControlCenterWindow(Gtk.Window):
 
     def select_page(self, page_name: str) -> None:
         self.stack.set_visible_child_name(page_name)
-        if page_name in self.sidebar_rows:
-            self.sidebar_list.select_row(self.sidebar_rows[page_name])
+        for name, r in self.sidebar_rows.items():
+            if name == page_name:
+                add_class(r, "active")
+                self.sidebar_list.select_row(r)
+            else:
+                remove_class(r, "active")
 
     def on_search_changed(self, entry: Gtk.SearchEntry) -> None:
         text = entry.get_text().lower().strip()
@@ -738,7 +814,7 @@ class ControlCenterWindow(Gtk.Window):
                 row.set_visible(visible)
 
     # --------------------------------------------------------------------------
-    # Page 1: Mouse & Touchpad (В стиле KDE Mouse KCM)
+    # Page 1: Mouse & Touchpad
     # --------------------------------------------------------------------------
     def build_mouse_page(self) -> Gtk.Widget:
         scrolled = Gtk.ScrolledWindow()
@@ -747,12 +823,12 @@ class ControlCenterWindow(Gtk.Window):
         add_class(root, "content-area")
         scrolled.add(root)
 
-        # Page Header
+        # Header
         header = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
         add_class(header, "page-header")
-        title = Gtk.Label(label="Мышь и сенсорная панель", xalign=0)
+        title = Gtk.Label(label="Мышь и тачпад", xalign=0)
         add_class(title, "page-title")
-        subtitle = Gtk.Label(label="Настройка ускорения, скорости курсора, кнопок и прокрутки", xalign=0)
+        subtitle = Gtk.Label(label="Настройка профиля ускорения, чувствительности и прокрутки", xalign=0)
         add_class(subtitle, "page-subtitle")
         header.pack_start(title, False, False, 0)
         header.pack_start(subtitle, False, False, 0)
@@ -776,7 +852,7 @@ class ControlCenterWindow(Gtk.Window):
         self.device_combo.connect("changed", self.on_mouse_device_selected)
         dev_row.pack_start(self.device_combo, True, True, 0)
 
-        refresh_btn = Gtk.Button(label="🔄 Обновить список")
+        refresh_btn = Gtk.Button(label="Обновить список устройств")
         refresh_btn.connect("clicked", self.on_refresh_mouse_devices)
         dev_row.pack_end(refresh_btn, False, False, 0)
         dev_card.pack_start(dev_row, False, False, 0)
@@ -788,18 +864,17 @@ class ControlCenterWindow(Gtk.Window):
 
         accel_title = Gtk.Label(label="Профиль ускорения курсора", xalign=0)
         add_class(accel_title, "card-title")
-        accel_sub = Gtk.Label(label="Реакция скорости курсора на ускорение руки", xalign=0)
+        accel_sub = Gtk.Label(label="Выбор алгоритма реакции курсора на физическое перемещение мыши", xalign=0)
         add_class(accel_sub, "card-subtitle")
         accel_card.pack_start(accel_title, False, False, 0)
         accel_card.pack_start(accel_sub, False, False, 0)
 
-        # Radio buttons
         self.accel_flat_radio = Gtk.RadioButton.new_with_label_from_widget(
             None,
-            "Плоский профиль (Flat / Raw 1:1) — Рекомендуется для игр (CS2, шутеры)"
+            "Плоский профиль (Flat / 1:1) — Рекомендуется для шутеров и точной мышечной памяти"
         )
         self.accel_flat_desc = Gtk.Label(
-            label="       Отключает искусственную акселерацию. Мышь двигается ровно на физическое расстояние.",
+            label="       Отключает программную акселерацию. Мышь перемещается строго пропорционально физическому сдвигу.",
             xalign=0
         )
         add_class(self.accel_flat_desc, "card-subtitle")
@@ -809,7 +884,7 @@ class ControlCenterWindow(Gtk.Window):
             "Адаптивный профиль (Adaptive) — Стандартное ускорение"
         )
         self.accel_adaptive_desc = Gtk.Label(
-            label="       Курсор ускоряется при резких взмахах рукой. Привычно для офисной работы.",
+            label="       Скорость курсора динамически увеличивается при резких взмахах.",
             xalign=0
         )
         add_class(self.accel_adaptive_desc, "card-subtitle")
@@ -826,9 +901,9 @@ class ControlCenterWindow(Gtk.Window):
         add_class(speed_card, "card")
         root.pack_start(speed_card, False, False, 0)
 
-        speed_title = Gtk.Label(label="Скорость указателя (Чувствительность)", xalign=0)
+        speed_title = Gtk.Label(label="Скорость указателя", xalign=0)
         add_class(speed_title, "card-title")
-        speed_sub = Gtk.Label(label="Базовая скорость перемещения курсора (от -1.0 до +1.0)", xalign=0)
+        speed_sub = Gtk.Label(label="Базовая чувствительность сенсора (от -1.0 до +1.0)", xalign=0)
         add_class(speed_sub, "card-subtitle")
         speed_card.pack_start(speed_title, False, False, 0)
         speed_card.pack_start(speed_sub, False, False, 0)
@@ -841,9 +916,9 @@ class ControlCenterWindow(Gtk.Window):
         self.speed_scale.connect("value-changed", self.on_speed_scale_changed)
 
         self.speed_val_label = Gtk.Label(label="0.00")
-        add_class(self.speed_val_label, "badge-tag")
+        add_class(self.speed_val_label, "m3-chip")
 
-        reset_speed_btn = Gtk.Button(label="Сброс в 0.0")
+        reset_speed_btn = Gtk.Button(label="Сбросить (0.0)")
         reset_speed_btn.connect("clicked", lambda _: self.speed_scale.set_value(0.0))
 
         speed_row.pack_start(self.speed_scale, True, True, 0)
@@ -860,62 +935,58 @@ class ControlCenterWindow(Gtk.Window):
         add_class(btn_title, "card-title")
         buttons_card.pack_start(btn_title, False, False, 0)
 
-        # Natural scrolling
         row_natural = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
         add_class(row_natural, "card-row")
-        nat_lbl = Gtk.Label(label="Естественная прокрутка (инверсия направления колесика)", xalign=0)
+        nat_lbl = Gtk.Label(label="Естественная прокрутка (инверсия направления)", xalign=0)
         self.switch_natural = Gtk.Switch()
         self.switch_natural.connect("notify::active", self.on_mouse_setting_changed)
         row_natural.pack_start(nat_lbl, True, True, 0)
         row_natural.pack_end(self.switch_natural, False, False, 0)
         buttons_card.pack_start(row_natural, False, False, 0)
 
-        # Left handed
         row_left = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
         add_class(row_left, "card-row")
-        left_lbl = Gtk.Label(label="Режим для левши (поменять ЛКМ и ПКМ местами)", xalign=0)
+        left_lbl = Gtk.Label(label="Режим для левши (основная правая кнопка)", xalign=0)
         self.switch_left = Gtk.Switch()
         self.switch_left.connect("notify::active", self.on_mouse_setting_changed)
         row_left.pack_start(left_lbl, True, True, 0)
         row_left.pack_end(self.switch_left, False, False, 0)
         buttons_card.pack_start(row_left, False, False, 0)
 
-        # Middle emulation
         row_mid = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
         add_class(row_mid, "card-row")
-        mid_lbl = Gtk.Label(label="Эмуляция средней кнопки (одновременное нажатие ЛКМ + ПКМ)", xalign=0)
+        mid_lbl = Gtk.Label(label="Эмуляция средней кнопки (нажатие ЛКМ + ПКМ)", xalign=0)
         self.switch_middle = Gtk.Switch()
         self.switch_middle.connect("notify::active", self.on_mouse_setting_changed)
         row_mid.pack_start(mid_lbl, True, True, 0)
         row_mid.pack_end(self.switch_middle, False, False, 0)
         buttons_card.pack_start(row_mid, False, False, 0)
 
-        # Card 5: Interactive Test Area (🎯 Как в KDE Plasma!)
+        # Card 5: Interactive Test Area (M3 Test Pad)
         test_card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
         add_class(test_card, "card")
         root.pack_start(test_card, False, False, 0)
 
-        test_title = Gtk.Label(label="🎯 Зона проверки мыши (Интерактивный тест)", xalign=0)
+        test_title = Gtk.Label(label="Проверка мыши (тестовая область)", xalign=0)
         add_class(test_title, "card-title")
-        test_sub = Gtk.Label(label="Подвигайте курсор, покликайте кнопками и покрутите колесико для проверки чувствительности", xalign=0)
+        test_sub = Gtk.Label(label="Интерактивная область для проверки перемещения, кликов и направления прокрутки", xalign=0)
         add_class(test_sub, "card-subtitle")
         test_card.pack_start(test_title, False, False, 0)
         test_card.pack_start(test_sub, False, False, 0)
 
-        # Indicators bar
         indicators_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
-        self.lbl_btn1 = Gtk.Label(label="Левая (ЛКМ)")
+        self.lbl_btn1 = Gtk.Label(label="Левая кнопка")
         add_class(self.lbl_btn1, "mouse-btn-indicator")
-        self.lbl_btn2 = Gtk.Label(label="Колесико (СКМ)")
+        self.lbl_btn2 = Gtk.Label(label="Колесико")
         add_class(self.lbl_btn2, "mouse-btn-indicator")
-        self.lbl_btn3 = Gtk.Label(label="Правая (ПКМ)")
+        self.lbl_btn3 = Gtk.Label(label="Правая кнопка")
         add_class(self.lbl_btn3, "mouse-btn-indicator")
-        self.lbl_scroll = Gtk.Label(label="Скролл")
+        self.lbl_scroll = Gtk.Label(label="Прокрутка")
         add_class(self.lbl_scroll, "mouse-btn-indicator")
 
         self.click_count = 0
-        self.lbl_click_count = Gtk.Label(label="Всего кликов: 0")
-        add_class(self.lbl_click_count, "badge-tag")
+        self.lbl_click_count = Gtk.Label(label="Кликов: 0")
+        add_class(self.lbl_click_count, "m3-chip")
 
         indicators_box.pack_start(self.lbl_btn1, False, False, 0)
         indicators_box.pack_start(self.lbl_btn2, False, False, 0)
@@ -924,10 +995,9 @@ class ControlCenterWindow(Gtk.Window):
         indicators_box.pack_end(self.lbl_click_count, False, False, 0)
         test_card.pack_start(indicators_box, False, False, 0)
 
-        # Interactive EventBox
         self.test_event_box = Gtk.EventBox()
         add_class(self.test_event_box, "test-pad")
-        self.test_event_box.set_size_request(-1, 100)
+        self.test_event_box.set_size_request(-1, 90)
         self.test_event_box.set_above_child(True)
         self.test_event_box.add_events(
             Gdk.EventMask.BUTTON_PRESS_MASK
@@ -937,8 +1007,8 @@ class ControlCenterWindow(Gtk.Window):
         )
 
         test_inner = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
-        test_inner_lbl = Gtk.Label(label="Кликайте и прокручивайте колесико в этой области...")
-        test_inner_lbl.set_opacity(0.7)
+        test_inner_lbl = Gtk.Label(label="Кликайте и прокручивайте колесико в этой области для проверки...")
+        test_inner_lbl.set_opacity(0.65)
         test_inner.pack_start(test_inner_lbl, True, True, 0)
         self.test_event_box.add(test_inner)
 
@@ -947,7 +1017,6 @@ class ControlCenterWindow(Gtk.Window):
         self.test_event_box.connect("scroll-event", self.on_test_scroll)
         test_card.pack_start(self.test_event_box, False, False, 0)
 
-        # Initial form population
         self.update_mouse_form()
         return scrolled
 
@@ -972,17 +1041,14 @@ class ControlCenterWindow(Gtk.Window):
             return
         dev = self.devices[self.current_device_idx]
 
-        # Profile
         if dev.accel_profile == "flat":
             self.accel_flat_radio.set_active(True)
         else:
             self.accel_adaptive_radio.set_active(True)
 
-        # Speed
         self.speed_scale.set_value(dev.accel_speed)
         self.speed_val_label.set_text(f"{dev.accel_speed:+.2f}")
 
-        # Toggles
         self.switch_natural.set_active(dev.natural_scrolling)
         self.switch_left.set_active(dev.left_handed)
         self.switch_middle.set_active(dev.middle_emulation)
@@ -1030,10 +1096,9 @@ class ControlCenterWindow(Gtk.Window):
         )
         self.set_status(f"Настройки для «{dev.name}» применены мгновенно")
 
-    # Mouse Test Pad Events
     def on_test_button_press(self, _widget: Gtk.Widget, event: Gdk.EventButton) -> bool:
         self.click_count += 1
-        self.lbl_click_count.set_text(f"Всего кликов: {self.click_count}")
+        self.lbl_click_count.set_text(f"Кликов: {self.click_count}")
         if event.button == 1:
             add_class(self.lbl_btn1, "active")
         elif event.button == 2:
@@ -1052,14 +1117,14 @@ class ControlCenterWindow(Gtk.Window):
         return True
 
     def on_test_scroll(self, _widget: Gtk.Widget, event: Gdk.EventScroll) -> bool:
-        dir_text = "Скролл ↑" if event.direction == Gdk.ScrollDirection.UP else "Скролл ↓"
+        dir_text = "Прокрутка вверх" if event.direction == Gdk.ScrollDirection.UP else "Прокрутка вниз"
         self.lbl_scroll.set_text(dir_text)
         add_class(self.lbl_scroll, "active")
         GLib.timeout_add(150, lambda: remove_class(self.lbl_scroll, "active"))
         return True
 
     # --------------------------------------------------------------------------
-    # Page 2: Keyboard (Клавиатура и раскладки)
+    # Page 2: Keyboard
     # --------------------------------------------------------------------------
     def build_keyboard_page(self) -> Gtk.Widget:
         scrolled = Gtk.ScrolledWindow()
@@ -1068,18 +1133,17 @@ class ControlCenterWindow(Gtk.Window):
         add_class(root, "content-area")
         scrolled.add(root)
 
-        # Header
         header = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
         add_class(header, "page-header")
         title = Gtk.Label(label="Клавиатура", xalign=0)
         add_class(title, "page-title")
-        subtitle = Gtk.Label(label="Раскладки ввода, клавиша переключения и скорость повтора", xalign=0)
+        subtitle = Gtk.Label(label="Раскладки ввода, переключение языка и параметры автоповтора", xalign=0)
         add_class(subtitle, "page-subtitle")
         header.pack_start(title, False, False, 0)
         header.pack_start(subtitle, False, False, 0)
         root.pack_start(header, False, False, 0)
 
-        # Card 1: Layouts & Switching
+        # Card 1: Layouts
         layout_card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
         add_class(layout_card, "card")
         root.pack_start(layout_card, False, False, 0)
@@ -1088,7 +1152,6 @@ class ControlCenterWindow(Gtk.Window):
         add_class(l_title, "card-title")
         layout_card.pack_start(l_title, False, False, 0)
 
-        # Layouts entry
         l_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
         l_lbl = Gtk.Label(label="Активные раскладки:", xalign=0)
         self.entry_layouts = Gtk.Entry()
@@ -1097,7 +1160,6 @@ class ControlCenterWindow(Gtk.Window):
         l_box.pack_start(self.entry_layouts, True, True, 0)
         layout_card.pack_start(l_box, False, False, 0)
 
-        # Presets
         presets_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
         p_lbl = Gtk.Label(label="Быстрые пресеты:")
         presets_box.pack_start(p_lbl, False, False, 0)
@@ -1105,15 +1167,14 @@ class ControlCenterWindow(Gtk.Window):
         def set_preset(text: str) -> None:
             self.entry_layouts.set_text(text)
 
-        for p_name, p_val in [("US + RU", "us,ru"), ("US + UA", "us,ua"), ("US + KZ", "us,kz"), ("US Only", "us")]:
+        for p_name, p_val in [("US, RU", "us,ru"), ("US, UA", "us,ua"), ("US, KZ", "us,kz"), ("US Only", "us")]:
             btn = Gtk.Button(label=p_name)
             btn.connect("clicked", lambda _, val=p_val: set_preset(val))
             presets_box.pack_start(btn, False, False, 0)
         layout_card.pack_start(presets_box, False, False, 0)
 
-        # Switch key combo
         switch_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
-        sw_lbl = Gtk.Label(label="Комбинация для смены языка:", xalign=0)
+        sw_lbl = Gtk.Label(label="Клавиша смены языка:", xalign=0)
         self.switch_combo = Gtk.ComboBoxText()
         self.switch_options = [
             ("grp:win_space_toggle", "Win + Space (По умолчанию)"),
@@ -1131,68 +1192,63 @@ class ControlCenterWindow(Gtk.Window):
         switch_box.pack_start(self.switch_combo, True, True, 0)
         layout_card.pack_start(switch_box, False, False, 0)
 
-        # Card 2: Key Repeat & Latency
+        # Card 2: Repeat & Latency
         repeat_card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
         add_class(repeat_card, "card")
         root.pack_start(repeat_card, False, False, 0)
 
-        r_title = Gtk.Label(label="Отклик клавиатуры и автоповтор (xset rate)", xalign=0)
+        r_title = Gtk.Label(label="Отклик и частота повтора", xalign=0)
         add_class(r_title, "card-title")
-        r_sub = Gtk.Label(label="Оптимизация задержки нажатия клавиш для быстрой печати и игр", xalign=0)
+        r_sub = Gtk.Label(label="Оптимизация задержки нажатия клавиш (xset rate)", xalign=0)
         add_class(r_sub, "card-subtitle")
         repeat_card.pack_start(r_title, False, False, 0)
         repeat_card.pack_start(r_sub, False, False, 0)
 
-        # Delay
         delay_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
-        delay_lbl = Gtk.Label(label="Задержка перед повтором (Delay):", xalign=0)
-        delay_lbl.set_size_request(240, -1)
+        delay_lbl = Gtk.Label(label="Задержка перед повтором:", xalign=0)
+        delay_lbl.set_size_request(220, -1)
         self.delay_scale = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL, 150, 600, 10)
         self.delay_scale.set_value(self.keyboard_repeat_delay)
         self.delay_scale.set_hexpand(True)
-        self.delay_val_lbl = Gtk.Label(label=f"{self.keyboard_repeat_delay} ms")
-        add_class(self.delay_val_lbl, "badge-tag")
-        self.delay_scale.connect("value-changed", lambda s: self.delay_val_lbl.set_text(f"{int(s.get_value())} ms"))
+        self.delay_val_lbl = Gtk.Label(label=f"{self.keyboard_repeat_delay} мс")
+        add_class(self.delay_val_lbl, "m3-chip")
+        self.delay_scale.connect("value-changed", lambda s: self.delay_val_lbl.set_text(f"{int(s.get_value())} мс"))
 
         delay_box.pack_start(delay_lbl, False, False, 0)
         delay_box.pack_start(self.delay_scale, True, True, 0)
         delay_box.pack_start(self.delay_val_lbl, False, False, 0)
         repeat_card.pack_start(delay_box, False, False, 0)
 
-        # Rate
         rate_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
-        rate_lbl = Gtk.Label(label="Частота повтора (Repeat Rate):", xalign=0)
-        rate_lbl.set_size_request(240, -1)
+        rate_lbl = Gtk.Label(label="Частота повтора:", xalign=0)
+        rate_lbl.set_size_request(220, -1)
         self.rate_scale = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL, 15, 60, 5)
         self.rate_scale.set_value(self.keyboard_repeat_rate)
         self.rate_scale.set_hexpand(True)
-        self.rate_val_lbl = Gtk.Label(label=f"{self.keyboard_repeat_rate} cps")
-        add_class(self.rate_val_lbl, "badge-tag")
-        self.rate_scale.connect("value-changed", lambda s: self.rate_val_lbl.set_text(f"{int(s.get_value())} cps"))
+        self.rate_val_lbl = Gtk.Label(label=f"{self.keyboard_repeat_rate} симв/с")
+        add_class(self.rate_val_lbl, "m3-chip")
+        self.rate_scale.connect("value-changed", lambda s: self.rate_val_lbl.set_text(f"{int(s.get_value())} симв/с"))
 
         rate_box.pack_start(rate_lbl, False, False, 0)
         rate_box.pack_start(self.rate_scale, True, True, 0)
         rate_box.pack_start(self.rate_val_lbl, False, False, 0)
         repeat_card.pack_start(rate_box, False, False, 0)
 
-        # Preset Gaming Button
         preset_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
-        opt_btn = Gtk.Button(label="⚡ Пресет сверх-быстрого отклика (280ms / 40cps)")
+        opt_btn = Gtk.Button(label="Игровой пресет (280 мс / 40 симв/с)")
         opt_btn.connect("clicked", lambda _: (self.delay_scale.set_value(280), self.rate_scale.set_value(40)))
         preset_row.pack_start(opt_btn, False, False, 0)
         repeat_card.pack_start(preset_row, False, False, 0)
 
-        # Test entry
         test_entry_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
-        test_entry_lbl = Gtk.Label(label="Тестовое поле для проверки скорости ввода:", xalign=0)
+        test_entry_lbl = Gtk.Label(label="Поле для проверки скорости повтора клавиш:", xalign=0)
         add_class(test_entry_lbl, "card-subtitle")
         test_entry = Gtk.Entry()
-        test_entry.set_placeholder_text("Зажмите любую клавишу здесь для проверки скорости повтора...")
+        test_entry.set_placeholder_text("Зажмите любую клавишу здесь для проверки отклика...")
         test_entry_box.pack_start(test_entry_lbl, False, False, 0)
         test_entry_box.pack_start(test_entry, False, False, 0)
         repeat_card.pack_start(test_entry_box, False, False, 0)
 
-        # Apply button
         apply_kb_btn = Gtk.Button(label="Применить настройки клавиатуры")
         add_class(apply_kb_btn, "suggested-action")
         apply_kb_btn.connect("clicked", self.on_apply_keyboard_clicked)
@@ -1212,15 +1268,14 @@ class ControlCenterWindow(Gtk.Window):
         self.keyboard_repeat_delay = delay
         self.keyboard_repeat_rate = rate
 
-        # Live apply
         run_command(["setxkbmap", "-layout", layouts, "-option", switch_opt])
         run_command(["xset", "r", "rate", str(delay), str(rate)])
 
         save_all_input_settings(self.devices, layouts, switch_opt, delay, rate)
-        self.set_status("Настройки клавиатуры успешно применены и сохранены")
+        self.set_status("Настройки клавиатуры применены и сохранены")
 
     # --------------------------------------------------------------------------
-    # Page 3: Displays (Экраны и мониторы)
+    # Page 3: Displays
     # --------------------------------------------------------------------------
     def build_displays_page(self) -> Gtk.Widget:
         scrolled = Gtk.ScrolledWindow()
@@ -1231,56 +1286,54 @@ class ControlCenterWindow(Gtk.Window):
 
         header = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
         add_class(header, "page-header")
-        title = Gtk.Label(label="Экраны и дисплеи", xalign=0)
+        title = Gtk.Label(label="Дисплеи", xalign=0)
         add_class(title, "page-title")
-        subtitle = Gtk.Label(label="Подключенные мониторы, частота обновления и расположение", xalign=0)
+        subtitle = Gtk.Label(label="Параметры подключенных мониторов и конфигурация вывода", xalign=0)
         add_class(subtitle, "page-subtitle")
         header.pack_start(title, False, False, 0)
         header.pack_start(subtitle, False, False, 0)
         root.pack_start(header, False, False, 0)
 
-        # Monitors Cards
         displays = get_connected_displays()
         for disp in displays:
             card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
             add_class(card, "card")
 
             top_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
-            name_lbl = Gtk.Label(label=f"🖥️  {disp['name']}", xalign=0)
+            name_lbl = Gtk.Label(label=disp['name'], xalign=0)
             add_class(name_lbl, "card-title")
             top_row.pack_start(name_lbl, False, False, 0)
 
             if disp["primary"]:
-                prim_badge = Gtk.Label(label="Основной экран")
-                add_class(prim_badge, "badge-green")
+                prim_badge = Gtk.Label(label="Основной дисплей")
+                add_class(prim_badge, "m3-chip-success")
                 top_row.pack_start(prim_badge, False, False, 0)
 
             rate_badge = Gtk.Label(label=disp["rate"])
-            add_class(rate_badge, "badge-tag")
+            add_class(rate_badge, "m3-chip")
             top_row.pack_end(rate_badge, False, False, 0)
             card.pack_start(top_row, False, False, 0)
 
-            geom_lbl = Gtk.Label(label=f"Геометрия и позиция: {disp['geom']}", xalign=0)
+            geom_lbl = Gtk.Label(label=f"Разрешение и геометрия: {disp['geom']}", xalign=0)
             add_class(geom_lbl, "card-subtitle")
             card.pack_start(geom_lbl, False, False, 0)
 
             root.pack_start(card, False, False, 0)
 
-        # Action Buttons
         actions_card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
         add_class(actions_card, "card")
         root.pack_start(actions_card, False, False, 0)
 
-        a_title = Gtk.Label(label="Управление конфигурацией экранов", xalign=0)
+        a_title = Gtk.Label(label="Управление экранами", xalign=0)
         add_class(a_title, "card-title")
         actions_card.pack_start(a_title, False, False, 0)
 
         btns_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
-        arandr_btn = Gtk.Button(label="🖥️ Открыть графический редактор экранов (ARandR)")
+        arandr_btn = Gtk.Button(label="Открыть редактор ARandR")
         arandr_btn.connect("clicked", lambda _: subprocess.Popen(["arandr"]))
         btns_box.pack_start(arandr_btn, False, False, 0)
 
-        monitor_sh_btn = Gtk.Button(label="⚡ Переприменить авто-мониторы (monitor.sh)")
+        monitor_sh_btn = Gtk.Button(label="Применить конфигурацию monitor.sh")
         monitor_sh_btn.connect("clicked", self.on_run_monitor_sh)
         btns_box.pack_start(monitor_sh_btn, False, False, 0)
 
@@ -1292,10 +1345,106 @@ class ControlCenterWindow(Gtk.Window):
         script = HOME / ".config" / "i3" / "scripts" / "hardware" / "monitor.sh"
         if script.exists():
             run_command(["bash", str(script)])
-            self.set_status("Скрипт monitor.sh успешно выполнен")
+            self.set_status("Конфигурация мониторов обновлена")
 
     # --------------------------------------------------------------------------
-    # Page 4: Appearance & Themes (Внешний вид)
+    # Page 4: Gaming & Picom
+    # --------------------------------------------------------------------------
+    def build_gaming_page(self) -> Gtk.Widget:
+        scrolled = Gtk.ScrolledWindow()
+        scrolled.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
+        root = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
+        add_class(root, "content-area")
+        scrolled.add(root)
+
+        header = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
+        add_class(header, "page-header")
+        title = Gtk.Label(label="Игровой режим и Picom", xalign=0)
+        add_class(title, "page-title")
+        subtitle = Gtk.Label(label="Управление композитором для минимизации задержек ввода", xalign=0)
+        add_class(subtitle, "page-subtitle")
+        header.pack_start(title, False, False, 0)
+        header.pack_start(subtitle, False, False, 0)
+        root.pack_start(header, False, False, 0)
+
+        # Card 1: Picom
+        p_card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
+        add_class(p_card, "card")
+        root.pack_start(p_card, False, False, 0)
+
+        picom_running = run_command(["pgrep", "-x", "picom"]).returncode == 0
+        self.picom_active = picom_running
+
+        p_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
+        p_title = Gtk.Label(label="Композитор Picom (эффекты и прозрачность):", xalign=0)
+        add_class(p_title, "card-title")
+        self.picom_badge = Gtk.Label(label="Включен" if picom_running else "Отключен (игровой режим)")
+        add_class(self.picom_badge, "m3-chip-success" if picom_running else "m3-chip-warning")
+
+        self.switch_picom = Gtk.Switch()
+        self.switch_picom.set_active(picom_running)
+        self.switch_picom.connect("notify::active", self.on_picom_toggled)
+
+        p_row.pack_start(p_title, False, False, 0)
+        p_row.pack_start(self.picom_badge, False, False, 0)
+        p_row.pack_end(self.switch_picom, False, False, 0)
+        p_card.pack_start(p_row, False, False, 0)
+
+        p_desc = Gtk.Label(
+            label="В соревновательных играх (CS2, Left 4 Dead 2, Apex) рекомендуется отключать Picom.\n"
+                  "Это исключает задержку кадрового буфера композитора и снижает инпут-лаг до аппаратного минимума.\n"
+                  "Быстрое переключение доступно по комбинации: Mod + P.",
+            xalign=0
+        )
+        add_class(p_desc, "card-subtitle")
+        p_card.pack_start(p_desc, False, False, 0)
+
+        # Card 2: Low-Latency Tweaks
+        t_card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
+        add_class(t_card, "card")
+        root.pack_start(t_card, False, False, 0)
+
+        t_title = Gtk.Label(label="Активные параметры низкой задержки", xalign=0)
+        add_class(t_title, "card-title")
+        t_card.pack_start(t_title, False, False, 0)
+
+        items = [
+            ("Flat Mouse Acceleration (Raw 1:1)", "Включено", "Аппаратная акселерация мыши полностью отключена"),
+            ("Отключение тайм-аута DPMS", "Включено", "Экраны не переходят в спящий режим во время игр и видео"),
+            ("Быстрый автоповтор клавиатуры (280 мс)", "Включено", "Мгновенное срабатывание при зажатии клавиш"),
+        ]
+        for name, status, desc in items:
+            row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
+            add_class(row, "card-row")
+            lbl_name = Gtk.Label(label=name, xalign=0)
+            lbl_badge = Gtk.Label(label=status)
+            add_class(lbl_badge, "m3-chip-success")
+            lbl_desc = Gtk.Label(label=f"— {desc}", xalign=0)
+            add_class(lbl_desc, "card-subtitle")
+
+            row.pack_start(lbl_name, False, False, 0)
+            row.pack_start(lbl_badge, False, False, 0)
+            row.pack_start(lbl_desc, False, False, 0)
+            t_card.pack_start(row, False, False, 0)
+
+        return scrolled
+
+    def on_picom_toggled(self, switch: Gtk.Switch, _pspec: Any) -> None:
+        active = switch.get_active()
+        script = HOME / ".config" / "i3" / "scripts" / "software" / "toggle-picom.sh"
+        if script.exists():
+            subprocess.Popen([str(script)])
+            self.picom_badge.set_text("Включен" if active else "Отключен (игровой режим)")
+            if active:
+                remove_class(self.picom_badge, "m3-chip-warning")
+                add_class(self.picom_badge, "m3-chip-success")
+            else:
+                remove_class(self.picom_badge, "m3-chip-success")
+                add_class(self.picom_badge, "m3-chip-warning")
+            self.set_status(f"Композитор Picom {'запущен' if active else 'отключен'}")
+
+    # --------------------------------------------------------------------------
+    # Page 5: Appearance
     # --------------------------------------------------------------------------
     def build_appearance_page(self) -> Gtk.Widget:
         scrolled = Gtk.ScrolledWindow()
@@ -1306,9 +1455,9 @@ class ControlCenterWindow(Gtk.Window):
 
         header = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
         add_class(header, "page-header")
-        title = Gtk.Label(label="Внешний вид и темы", xalign=0)
+        title = Gtk.Label(label="Внешний вид", xalign=0)
         add_class(title, "page-title")
-        subtitle = Gtk.Label(label="Управление темами оформления, курсорами и шрифтами", xalign=0)
+        subtitle = Gtk.Label(label="Темы оформления рабочего стола, курсор и шрифты", xalign=0)
         add_class(subtitle, "page-subtitle")
         header.pack_start(title, False, False, 0)
         header.pack_start(subtitle, False, False, 0)
@@ -1319,7 +1468,7 @@ class ControlCenterWindow(Gtk.Window):
         add_class(theme_card, "card")
         root.pack_start(theme_card, False, False, 0)
 
-        t_title = Gtk.Label(label="Темы оформления (Hyprdots Rice)", xalign=0)
+        t_title = Gtk.Label(label="Темы оформления", xalign=0)
         add_class(t_title, "card-title")
         theme_card.pack_start(t_title, False, False, 0)
 
@@ -1327,7 +1476,7 @@ class ControlCenterWindow(Gtk.Window):
         cur_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
         cur_lbl = Gtk.Label(label="Текущая тема:", xalign=0)
         self.cur_theme_badge = Gtk.Label(label=cur_theme)
-        add_class(self.cur_theme_badge, "badge-tag")
+        add_class(self.cur_theme_badge, "m3-chip")
         cur_row.pack_start(cur_lbl, False, False, 0)
         cur_row.pack_start(self.cur_theme_badge, False, False, 0)
         theme_card.pack_start(cur_row, False, False, 0)
@@ -1338,7 +1487,7 @@ class ControlCenterWindow(Gtk.Window):
         active_t_idx = 0
         for idx, th in enumerate(all_themes):
             self.themes_combo.append_text(th)
-            if th == cur_theme:
+            if th.lower() in cur_theme.lower() or cur_theme.lower() in th.lower():
                 active_t_idx = idx
         if all_themes:
             self.themes_combo.set_active(active_t_idx)
@@ -1348,7 +1497,7 @@ class ControlCenterWindow(Gtk.Window):
         apply_t_btn.connect("clicked", self.on_apply_theme_clicked)
         themes_row.pack_start(apply_t_btn, False, False, 0)
 
-        open_selector_btn = Gtk.Button(label="🎨 Галерея тем (Mod+T)")
+        open_selector_btn = Gtk.Button(label="Галерея тем (Mod+T)")
         open_selector_btn.connect("clicked", lambda _: subprocess.Popen([str(HOME / ".config/i3/scripts/software/theme-select.sh")]))
         themes_row.pack_end(open_selector_btn, False, False, 0)
         theme_card.pack_start(themes_row, False, False, 0)
@@ -1371,7 +1520,7 @@ class ControlCenterWindow(Gtk.Window):
         self.cursor_size_combo = Gtk.ComboBoxText()
         for s in ["16", "24", "32", "48"]:
             self.cursor_size_combo.append_text(s)
-        self.cursor_size_combo.set_active(1)  # 24
+        self.cursor_size_combo.set_active(1)
 
         c_row.pack_start(c_lbl, False, False, 0)
         c_row.pack_start(self.cursor_entry, True, True, 0)
@@ -1418,103 +1567,7 @@ class ControlCenterWindow(Gtk.Window):
         self.set_status(f"Курсор {th} ({sz}px) сохранён и применён")
 
     # --------------------------------------------------------------------------
-    # Page 5: Gaming & Compositor (Игровой режим & Picom)
-    # --------------------------------------------------------------------------
-    def build_gaming_page(self) -> Gtk.Widget:
-        scrolled = Gtk.ScrolledWindow()
-        scrolled.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
-        root = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
-        add_class(root, "content-area")
-        scrolled.add(root)
-
-        header = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
-        add_class(header, "page-header")
-        title = Gtk.Label(label="Игровой режим и производительность", xalign=0)
-        add_class(title, "page-title")
-        subtitle = Gtk.Label(label="Управление задержками ввода (Input Lag) и композитором Picom", xalign=0)
-        add_class(subtitle, "page-subtitle")
-        header.pack_start(title, False, False, 0)
-        header.pack_start(subtitle, False, False, 0)
-        root.pack_start(header, False, False, 0)
-
-        # Card 1: Picom
-        p_card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
-        add_class(p_card, "card")
-        root.pack_start(p_card, False, False, 0)
-
-        picom_running = run_command(["pgrep", "-x", "picom"]).returncode == 0
-        self.picom_active = picom_running
-
-        p_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
-        p_title = Gtk.Label(label="Композитор Picom (Тени, блюр, закругления):", xalign=0)
-        add_class(p_title, "card-title")
-        self.picom_badge = Gtk.Label(label="Включен" if picom_running else "Отключен")
-        add_class(self.picom_badge, "badge-green" if picom_running else "badge-amber")
-
-        self.switch_picom = Gtk.Switch()
-        self.switch_picom.set_active(picom_running)
-        self.switch_picom.connect("notify::active", self.on_picom_toggled)
-
-        p_row.pack_start(p_title, False, False, 0)
-        p_row.pack_start(self.picom_badge, False, False, 0)
-        p_row.pack_end(self.switch_picom, False, False, 0)
-        p_card.pack_start(p_row, False, False, 0)
-
-        p_desc = Gtk.Label(
-            label="💡 В соревновательных играх (CS2, Left 4 Dead 2, Apex) рекомендуется ОТКЛЮЧАТЬ Picom.\n"
-                  "Это убирает наложение кадрового буфера композитора и снижает задержку ввода до чистого 0.\n"
-                  "Быстрое переключение в любой момент: Mod + P.",
-            xalign=0
-        )
-        add_class(p_desc, "card-subtitle")
-        p_card.pack_start(p_desc, False, False, 0)
-
-        # Card 2: Low-Latency Tweaks
-        t_card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
-        add_class(t_card, "card")
-        root.pack_start(t_card, False, False, 0)
-
-        t_title = Gtk.Label(label="Активные киберспортивные твики Xorg", xalign=0)
-        add_class(t_title, "card-title")
-        t_card.pack_start(t_title, False, False, 0)
-
-        items = [
-            ("Flat Mouse Acceleration (Raw 1:1)", "Включено", "Аппаратная акселерация мыши полностью отключена"),
-            ("Отключение DPMS & Screen Blanking", "Включено", "Экраны не засыпают посреди игр или видео"),
-            ("Быстрый отклик клавиатуры (280ms / 40cps)", "Включено", "Мгновенное срабатывание при зажатии клавиш"),
-        ]
-        for name, status, desc in items:
-            row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
-            add_class(row, "card-row")
-            lbl_name = Gtk.Label(label=name, xalign=0)
-            lbl_badge = Gtk.Label(label=status)
-            add_class(lbl_badge, "badge-green")
-            lbl_desc = Gtk.Label(label=f"— {desc}", xalign=0)
-            add_class(lbl_desc, "card-subtitle")
-
-            row.pack_start(lbl_name, False, False, 0)
-            row.pack_start(lbl_badge, False, False, 0)
-            row.pack_start(lbl_desc, False, False, 0)
-            t_card.pack_start(row, False, False, 0)
-
-        return scrolled
-
-    def on_picom_toggled(self, switch: Gtk.Switch, _pspec: Any) -> None:
-        active = switch.get_active()
-        script = HOME / ".config" / "i3" / "scripts" / "software" / "toggle-picom.sh"
-        if script.exists():
-            subprocess.Popen([str(script)])
-            self.picom_badge.set_text("Включен" if active else "Отключен")
-            if active:
-                remove_class(self.picom_badge, "badge-amber")
-                add_class(self.picom_badge, "badge-green")
-            else:
-                remove_class(self.picom_badge, "badge-green")
-                add_class(self.picom_badge, "badge-amber")
-            self.set_status(f"Picom {'запущен' if active else 'остановлен (игровой режим)'}")
-
-    # --------------------------------------------------------------------------
-    # Page 6: Autostart (Автозапуск)
+    # Page 6: Autostart
     # --------------------------------------------------------------------------
     def build_autostart_page(self) -> Gtk.Widget:
         scrolled = Gtk.ScrolledWindow()
@@ -1525,20 +1578,19 @@ class ControlCenterWindow(Gtk.Window):
 
         header = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
         add_class(header, "page-header")
-        title = Gtk.Label(label="Автозапуск приложений", xalign=0)
+        title = Gtk.Label(label="Автозапуск", xalign=0)
         add_class(title, "page-title")
-        subtitle = Gtk.Label(label="Программы и скрипты, запускаемые при старте сессии i3", xalign=0)
+        subtitle = Gtk.Label(label="Службы и приложения, запускаемые при старте сессии i3", xalign=0)
         add_class(subtitle, "page-subtitle")
         header.pack_start(title, False, False, 0)
         header.pack_start(subtitle, False, False, 0)
         root.pack_start(header, False, False, 0)
 
-        # Parse i3 config autostarts
         card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
         add_class(card, "card")
         root.pack_start(card, False, False, 0)
 
-        c_title = Gtk.Label(label="Службы i3wm (~/.config/i3/config)", xalign=0)
+        c_title = Gtk.Label(label="Службы сессии i3wm (~/.config/i3/config)", xalign=0)
         add_class(c_title, "card-title")
         card.pack_start(c_title, False, False, 0)
 
@@ -1566,7 +1618,7 @@ class ControlCenterWindow(Gtk.Window):
 
             sw = Gtk.Switch()
             sw.set_active(True)
-            sw.set_sensitive(False)  # Managed by i3 config
+            sw.set_sensitive(False)
 
             row.pack_start(lbl_name, False, False, 0)
             row.pack_start(lbl_desc, True, True, 0)
@@ -1576,7 +1628,7 @@ class ControlCenterWindow(Gtk.Window):
         return scrolled
 
     # --------------------------------------------------------------------------
-    # Page 7: Shortcuts (Горячие клавиши)
+    # Page 7: Shortcuts
     # --------------------------------------------------------------------------
     def build_shortcuts_page(self) -> Gtk.Widget:
         scrolled = Gtk.ScrolledWindow()
@@ -1587,9 +1639,9 @@ class ControlCenterWindow(Gtk.Window):
 
         header = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
         add_class(header, "page-header")
-        title = Gtk.Label(label="Комбинации клавиш (i3 Keybindings)", xalign=0)
+        title = Gtk.Label(label="Горячие клавиши", xalign=0)
         add_class(title, "page-title")
-        subtitle = Gtk.Label(label="Список основных хоткеев управления рабочим столом ($mod = Win/Super)", xalign=0)
+        subtitle = Gtk.Label(label="Основные комбинации клавиш управления системой ($mod = Super / Win)", xalign=0)
         add_class(subtitle, "page-subtitle")
         header.pack_start(title, False, False, 0)
         header.pack_start(subtitle, False, False, 0)
@@ -1620,7 +1672,7 @@ class ControlCenterWindow(Gtk.Window):
             row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=14)
             add_class(row, "card-row")
             lbl_key = Gtk.Label(label=keys, xalign=0)
-            add_class(lbl_key, "badge-tag")
+            add_class(lbl_key, "m3-chip")
             lbl_key.set_size_request(160, -1)
 
             lbl_act = Gtk.Label(label=action, xalign=0)
@@ -1632,7 +1684,7 @@ class ControlCenterWindow(Gtk.Window):
         return scrolled
 
     # --------------------------------------------------------------------------
-    # Page 8: About System (О системе - В стиле KDE Info Center)
+    # Page 8: About System
     # --------------------------------------------------------------------------
     def build_about_page(self) -> Gtk.Widget:
         scrolled = Gtk.ScrolledWindow()
@@ -1645,13 +1697,12 @@ class ControlCenterWindow(Gtk.Window):
         add_class(header, "page-header")
         title = Gtk.Label(label="О системе", xalign=0)
         add_class(title, "page-title")
-        subtitle = Gtk.Label(label="Сведения об аппаратном и программном обеспечении", xalign=0)
+        subtitle = Gtk.Label(label="Сведения об аппаратном обеспечении и операционной системе", xalign=0)
         add_class(subtitle, "page-subtitle")
         header.pack_start(title, False, False, 0)
         header.pack_start(subtitle, False, False, 0)
         root.pack_start(header, False, False, 0)
 
-        # Specs Card
         card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
         add_class(card, "card")
         root.pack_start(card, False, False, 0)
@@ -1682,16 +1733,15 @@ class ControlCenterWindow(Gtk.Window):
             row.pack_start(lbl_v, True, True, 0)
             card.pack_start(row, False, False, 0)
 
-        # Rice Info Card
         rice_card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
         add_class(rice_card, "card")
         root.pack_start(rice_card, False, False, 0)
 
-        r_title = Gtk.Label(label="🌌 Arch Linux Rice: i3-gaps + EWW + Picom", xalign=0)
+        r_title = Gtk.Label(label="Arch Linux i3wm Rice", xalign=0)
         add_class(r_title, "card-title")
         r_sub = Gtk.Label(
             label="Конфигурация оптимизирована для сверхнизкого инпут-лага, киберспортивных шутеров и плавной работы.\n"
-                  "Полная поддержка GNU Stow, автоматический инсталлятор и менеджер тем в стиле Hyprdots.",
+                  "Интерфейс спроектирован по спецификации Material Design 3 (Google M3).",
             xalign=0
         )
         add_class(r_sub, "card-subtitle")
