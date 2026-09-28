@@ -3033,7 +3033,8 @@ class ControlCenterWindow(Gtk.Window):
         dialog = Gtk.Dialog(
             title="Добавить программу в автозапуск",
             parent=self,
-            flags=Gtk.DialogFlags.MODAL | Gtk.DialogFlags.DESTROY_WITH_PARENT,
+            modal=True,
+            destroy_with_parent=True,
         )
         dialog.set_default_size(520, 360)
         add_class(dialog, "control-center-window")
