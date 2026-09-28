@@ -63,7 +63,6 @@ PACMAN_PACKAGES=(
     imagemagick
     python
     python-pillow
-    python-pywal
     ttf-jetbrains-mono-nerd
     papirus-icon-theme
     stow
@@ -80,6 +79,7 @@ sudo pacman -S --needed --noconfirm "${PACMAN_PACKAGES[@]}"
 
 title "Установка AUR пакетов"
 AUR_PACKAGES=(
+    python-pywal16
     eww
     picom-pijulius-git
     autotiling
