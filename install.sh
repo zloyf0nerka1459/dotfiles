@@ -64,6 +64,7 @@ PACMAN_PACKAGES=(
     python
     python-pillow
     ttf-jetbrains-mono-nerd
+    noto-fonts-emoji
     papirus-icon-theme
     stow
     starship
