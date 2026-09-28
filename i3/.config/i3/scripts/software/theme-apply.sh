@@ -128,10 +128,17 @@ if [ ! -f "$DUNST_CONF" ]; then
     DUNST_CONF="$HOME/.cache/wal/colors-dunst.dunstrc"
 fi
 
+# Ensure conflicting daemons cannot hijack DBus notifications
+killall -9 deadd-notification-center 2>/dev/null || true
+pkill -f deadd-notification-center 2>/dev/null || true
+killall -9 mako swaync 2>/dev/null || true
+
 if command -v dunst >/dev/null 2>&1; then
     killall -9 dunst 2>/dev/null || true
     sleep 0.15
     if [ -f "$DUNST_CONF" ]; then
+        mkdir -p "$HOME/.config/dunst"
+        cp -f "$DUNST_CONF" "$HOME/.config/dunst/dunstrc" 2>/dev/null || true
         dunst -config "$DUNST_CONF" >/dev/null 2>&1 &
     else
         dunst >/dev/null 2>&1 &

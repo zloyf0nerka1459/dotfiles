@@ -1,99 +1,70 @@
 [global]
-    ### --- Позиционирование и размеры ---
-    # Отображать на мониторе, где сейчас находится курсор мыши
     monitor = 0
     follow = mouse
     
-    # Геометрия: ширина от 300 до 450 пикселей, макс. высота карточки, отступы от угла экрана
+    # Геометрия: аккуратная адаптивная карточка вместо жесткого кирпича
     width = (300, 450)
     height = 300
     origin = top-right
     offset = 20x20
-    scale = 0
     notification_limit = 4
-
-    ### --- Внешний вид ---
-    # Прогресс-бар (например, при изменении громкости)
-    progress_bar = true
-    progress_bar_height = 4
-    progress_bar_frame_width = 1
-    progress_bar_min_width = 150
-    progress_bar_max_width = 400
-
-    # Разделители между уведомлениями, если их несколько
-    separator_height = 4
+    
+    # Отступы внутри карточки, чтобы текст не прилипал к краям
     padding = 12
     horizontal_padding = 12
     text_icon_padding = 10
     
-    # Скругление углов (совпадает с твоим picom.conf, где corner-radius = 10)
+    # Возвращаем скругления (10px идеально подходят под твой Picom)
     corner_radius = 10
-
-    # Рамка вокруг уведомления
     frame_width = 2
-    frame_color = "#3b4252"
-    separator_color = "frame"
-
-    # Сортировка и направление (новые сверху)
+    
     sort = yes
     direction = down
-
-    ### --- Текст и шрифты ---
-    # Используй нормальный системный шрифт, например JetBrains Mono или Inter
-    font = JetBrains Mono 10
-    line_height = 3
     
-    # Настройки разметки (разрешает жирный текст/ссылки)
+    # Шрифт (лучше использовать JetBrains Mono или твой системный вместо generic Monospace)
+    font = "JetBrains Mono 10"
+    line_height = 3
     markup = full
-    format = "<b>%s</b>\n%b"
+
+    # Настройка заголовка: выводит [Имя Приложения] цветом #C66F4F
+    format = "<span foreground='#C66F4F'>[%a]</span> <b>%s</b>\n%b"
+    
     alignment = left
     vertical_alignment = center
-    
-    # Показывать ли количество пропущенных уведомлений
     show_age_threshold = 60
     ellipsize = middle
     ignore_newline = no
     stack_duplicates = true
     hide_duplicate_count = false
-
-    ### --- Иконки ---
-    # Чтобы отображались цветные иконки приложений
+    
+    # Настройка иконок
     icon_position = left
     min_icon_size = 32
     max_icon_size = 64
-    # Путь к твоей системной теме иконок (поменяй Papirus на свою, если используешь другую)
     icon_path = /usr/share/icons/Papirus/16x16/apps:/usr/share/icons/Papirus/16x16/devices
-
-    ### --- История и управление ---
+    
     sticky_history = yes
     history_length = 20
-    dmenu = /usr/bin/rofi -dmenu -p dunst:
-    browser = /usr/bin/xdg-open
-    always_run_script = true
-    title = Dunst
-    class = Dunst
-    
-    # Логика мыши
     mouse_left_click = close_current
     mouse_middle_click = do_action
     mouse_right_click = close_all
 
-# === СТИЛИ ДЛЯ РАЗНЫХ ТИПОВ УВЕДОМЛЕНИЙ ===
+# === ИСПРАВЛЕННАЯ ПАЛИТРА УВЕДОМЛЕНИЙ ===
 
 [urgency_low]
-    background = "#2e3440"
-    foreground = "#d8dee9"
-    frame_color = "#4c566a"
+    background = "#1f1312"
+    foreground = "#c7c4c3"
+    frame_color = "#72605e"       # Приглушенный цвет для второстепенных рамок
     timeout = 4
 
 [urgency_normal]
-    background = "#2e3440"
-    foreground = "#d8dee9"
-    frame_color = "#81a1c1"   # Акцентный синий цвет рамки
+    background = "#1f1312"
+    foreground = "#c7c4c3"
+    frame_color = "#C66F4F"       # Твой главный акцентный цвет из обоев для рамки
     timeout = 7
 
-[urgency_high]
-    background = "#bf616a"   # Красный фон для критических ошибок
-    foreground = "#eceff4"
-    frame_color = "#88c0d0"
+[urgency_critical]                 # В Dunst используется "critical", а не "high"
+    background = "#A1674C"        # Обычно это красный/тревожный цвет из палитры
+    foreground = "#c7c4c3"
+    frame_color = "#A1674C"
     timeout = 0
