@@ -1,4 +1,4 @@
-# 🌌 Arch Linux Rice: i3-gaps + EWW + Picom-Pijulius
+# 🌌 Arch Linux Rice: i3-wm + EWW + Picom-Pijulius
 
 > Современное, быстрое и полностью адаптивное рисовое окружение для Arch Linux с визуальным переключателем тем в стиле Hyprdots, интерактивными панелями EWW, поддержкой Wi-Fi / Ethernet и игровым режимом с нулевой задержкой.
 

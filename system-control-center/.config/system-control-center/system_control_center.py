@@ -848,7 +848,35 @@ def get_system_specs() -> dict[str, str]:
     except Exception:
         pass
     specs["gpu"] = gpu_str
-    specs["wm"] = "i3-gaps (XLibre X11 Server)"
+
+    wm_str = "i3-wm"
+    try:
+        res = run_command(["i3", "--version"])
+        if res.returncode == 0:
+            m = re.search(r"i3 version ([\d.]+)", res.stdout)
+            if m:
+                wm_str = f"i3-wm v{m.group(1)}"
+            else:
+                wm_str = "i3-wm"
+    except Exception:
+        pass
+
+    display_server = "X11"
+    try:
+        if os.environ.get("WAYLAND_DISPLAY"):
+            display_server = "Wayland"
+        else:
+            res = run_command(["pacman", "-Q", "xlibre-xserver"])
+            if res.returncode == 0:
+                display_server = "XLibre X11 Server"
+            else:
+                res2 = run_command(["pacman", "-Q", "xorg-server"])
+                if res2.returncode == 0:
+                    display_server = "Xorg X11 Server"
+    except Exception:
+        pass
+
+    specs["wm"] = f"{wm_str} ({display_server})"
     return specs
 
 def get_connected_displays() -> list[dict[str, Any]]:
