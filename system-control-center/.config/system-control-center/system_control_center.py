@@ -574,7 +574,6 @@ class ControlCenterWindow(Gtk.Window):
         add_class(self, "control-center-window")
         self.set_default_size(1140, 760)
         self.set_position(Gtk.WindowPosition.CENTER)
-        self.set_wmclass("system-control-center", "System-control-center")
         self.connect("destroy", Gtk.main_quit)
 
         # State
@@ -1721,6 +1720,8 @@ class ControlCenterWindow(Gtk.Window):
 
 
 def main() -> None:
+    GLib.set_prgname("system-control-center")
+    GLib.set_application_name("Параметры системы")
     load_css()
     win = ControlCenterWindow()
     win.show_all()
