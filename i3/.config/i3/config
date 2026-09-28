@@ -144,6 +144,7 @@ exec --no-startup-id dunst
 exec --no-startup-id copyq
 exec_always --no-startup-id command -v spice-vdagent >/dev/null 2>&1 && pgrep -x spice-vdagent >/dev/null || spice-vdagent
 exec --no-startup-id nm-applet
+exec --no-startup-id ~/.config/i3/scripts/software/xdg-autostart.sh
 
 # 4. Утилиты интерфейса (запускаются ПОСЛЕ настройки мониторов)
 exec --no-startup-id [ -f ~/.fehbg ] && ~/.fehbg || ~/.config/i3/scripts/software/theme-apply.sh ~/.config/themes/ghibli-serenity

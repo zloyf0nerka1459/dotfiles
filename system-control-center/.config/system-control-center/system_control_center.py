@@ -5,10 +5,12 @@
 # ==============================================================================
 
 import colorsys
+import configparser
 import json
 import os
 import platform
 import re
+import shlex
 import shutil
 import subprocess
 from dataclasses import dataclass
@@ -907,6 +909,330 @@ def get_current_theme() -> str:
         except Exception:
             pass
     return "ghibli-serenity"
+
+# ==============================================================================
+# Autostart Manager Backend (Apps, i3 Session Scripts, Systemd User Services)
+# ==============================================================================
+
+SESSION_SCRIPTS: list[dict[str, str]] = [
+    {
+        "id": "monitor",
+        "title": "Настройка дисплеев (monitor.sh)",
+        "desc": "Автоматическое определение разрешения, ориентации и высокой частоты (144Hz)",
+        "pattern": "scripts/hardware/monitor.sh",
+        "cmd": str(HOME / ".config/i3/scripts/hardware/monitor.sh"),
+        "proc": "monitor.sh",
+        "icon": "video-display-symbolic",
+    },
+    {
+        "id": "input",
+        "title": "Настройка устройств ввода (input.sh)",
+        "desc": "Оптимизация задержки, скорость автоповтора (280/40) и плоский профиль мыши",
+        "pattern": "scripts/hardware/input.sh",
+        "cmd": str(HOME / ".config/i3/scripts/hardware/input.sh"),
+        "proc": "input.sh",
+        "icon": "input-mouse-symbolic",
+    },
+    {
+        "id": "polkit",
+        "title": "Polkit агент аутентификации (polkit-agent.sh)",
+        "desc": "Графические диалоговые окна запроса прав администратора (root)",
+        "pattern": "scripts/software/polkit-agent.sh",
+        "cmd": str(HOME / ".config/i3/scripts/software/polkit-agent.sh"),
+        "proc": "polkit-kde-authentication-agent-1",
+        "icon": "dialog-password-symbolic",
+    },
+    {
+        "id": "theme",
+        "title": "Применение темы оформления (theme-apply.sh)",
+        "desc": "Установка обоев рабочего стола, генерация палитры Pywal и темы GTK",
+        "pattern": "scripts/software/theme-apply.sh",
+        "cmd": f"{HOME}/.config/i3/scripts/software/theme-apply.sh {HOME}/.config/themes/aruko",
+        "proc": "theme-apply.sh",
+        "icon": "preferences-desktop-appearance-symbolic",
+    },
+    {
+        "id": "picom",
+        "title": "Композитор окон (picom)",
+        "desc": "Аппаратное сглаживание, тени, размытие и прозрачность окон",
+        "pattern": "picom --config",
+        "cmd": f"picom --config {HOME}/.config/picom/picom.conf -b",
+        "proc": "picom",
+        "icon": "applications-games-symbolic",
+    },
+    {
+        "id": "eww",
+        "title": "Панели рабочего стола (EWW)",
+        "desc": "Верхняя и нижняя панели рабочего стола с индикаторами системы",
+        "pattern": "eww/launch.sh",
+        "cmd": f"{HOME}/.config/eww/launch.sh --restart",
+        "proc": "eww",
+        "icon": "view-paged-symbolic",
+    },
+    {
+        "id": "autotiling",
+        "title": "Автоматический тайлинг (autotiling)",
+        "desc": "Умное чередование вертикального и горизонтального разделения окон",
+        "pattern": "autotiling",
+        "cmd": "autotiling",
+        "proc": "autotiling",
+        "icon": "view-grid-symbolic",
+    },
+    {
+        "id": "dunst",
+        "title": "Служба уведомлений (dunst)",
+        "desc": "Всплывающие уведомления в стиле Material Design 3",
+        "pattern": "exec --no-startup-id dunst",
+        "cmd": "dunst",
+        "proc": "dunst",
+        "icon": "preferences-system-notifications-symbolic",
+    },
+    {
+        "id": "copyq",
+        "title": "Менеджер буфера обмена (copyq)",
+        "desc": "История буфера обмена с поддержкой поиска и изображений (Mod+C)",
+        "pattern": "exec --no-startup-id copyq",
+        "cmd": "copyq",
+        "proc": "copyq",
+        "icon": "edit-paste-symbolic",
+    },
+    {
+        "id": "nm-applet",
+        "title": "Сетевой апплет NetworkManager",
+        "desc": "Индикатор подключений Wi-Fi и проводной сети в системном лотке",
+        "pattern": "exec --no-startup-id nm-applet",
+        "cmd": "nm-applet",
+        "proc": "nm-applet",
+        "icon": "network-wired-symbolic",
+    },
+]
+
+SYSTEMD_SERVICES: list[dict[str, str]] = [
+    {
+        "id": "gamemoded.service",
+        "title": "GameMode Daemon (gamemoded)",
+        "desc": "Оптимизация приоритета CPU, I/O и видеокарты при запуске игр",
+        "icon": "applications-games-symbolic",
+    },
+    {
+        "id": "reaper-discord-rpc.service",
+        "title": "Reaper Discord Rich Presence",
+        "desc": "Трансляция активного проекта Reaper DAW в статус профиля Discord",
+        "icon": "audio-x-generic-symbolic",
+    },
+    {
+        "id": "pipewire.service",
+        "title": "PipeWire Audio Server",
+        "desc": "Основной низколатентный мультимедийный сервер звука и видео",
+        "icon": "audio-card-symbolic",
+    },
+    {
+        "id": "wireplumber.service",
+        "title": "WirePlumber Session Manager",
+        "desc": "Модульный менеджер сессий и аудиоустройств PipeWire",
+        "icon": "audio-volume-high-symbolic",
+    },
+    {
+        "id": "pipewire-pulse.service",
+        "title": "PipeWire PulseAudio Emulation",
+        "desc": "Слой совместимости со старыми играми и приложениями PulseAudio",
+        "icon": "audio-speakers-symbolic",
+    },
+    {
+        "id": "telegraph-studio.service",
+        "title": "Telegraph Studio Service",
+        "desc": "Фоновая локальная служба публикации статей Telegraph",
+        "icon": "text-html-symbolic",
+    },
+    {
+        "id": "beszel-tunnel.service",
+        "title": "Beszel Monitoring Tunnel",
+        "desc": "Безопасный сетевой туннель мониторинга аппаратных ресурсов",
+        "icon": "network-workgroup-symbolic",
+    },
+    {
+        "id": "gemini-tunnel.service",
+        "title": "Gemini HTTP Proxy Tunnel",
+        "desc": "Локальный сетевой туннель прокси для LLM-инструментов",
+        "icon": "system-search-symbolic",
+    },
+    {
+        "id": "wivrn.service",
+        "title": "WiVRn OpenXR Server",
+        "desc": "Беспроводной OpenXR драйвер и сервис потоковой передачи для VR",
+        "icon": "input-gaming-symbolic",
+    },
+]
+
+def is_process_running(pattern: str) -> bool:
+    try:
+        r = subprocess.run(["pgrep", "-f", pattern], capture_output=True, text=True, check=False)
+        return r.returncode == 0
+    except Exception:
+        return False
+
+def get_autostart_desktop_apps() -> list[dict[str, Any]]:
+    apps: list[dict[str, Any]] = []
+    if AUTOSTART_DIR.is_dir():
+        for p in sorted(AUTOSTART_DIR.glob("*.desktop")):
+            try:
+                cp = configparser.ConfigParser(interpolation=None)
+                cp.read(p, encoding="utf-8")
+                if "Desktop Entry" in cp:
+                    sec = cp["Desktop Entry"]
+                    name = sec.get("Name", p.stem)
+                    cmd = sec.get("Exec", "")
+                    hidden = sec.getboolean("Hidden", fallback=False)
+                    gnome = sec.getboolean("X-GNOME-Autostart-enabled", fallback=True)
+                    enabled = (not hidden) and gnome
+                    proc_key = cmd.split()[0] if cmd else name
+                    proc_key = Path(proc_key).name
+                    running = is_process_running(proc_key)
+                    apps.append({
+                        "path": p,
+                        "name": name,
+                        "exec": cmd,
+                        "enabled": enabled,
+                        "running": running,
+                        "proc_key": proc_key,
+                    })
+            except Exception:
+                pass
+    return apps
+
+def set_autostart_desktop_app_enabled(path: Path, enabled: bool) -> None:
+    try:
+        cp = configparser.ConfigParser(interpolation=None)
+        cp.read(path, encoding="utf-8")
+        if "Desktop Entry" not in cp:
+            cp["Desktop Entry"] = {}
+        cp["Desktop Entry"]["Hidden"] = "false" if enabled else "true"
+        cp["Desktop Entry"]["X-GNOME-Autostart-enabled"] = "true" if enabled else "false"
+        with open(path, "w", encoding="utf-8") as f:
+            cp.write(f, space_around_delimiters=False)
+    except Exception:
+        pass
+
+def delete_autostart_desktop_app(path: Path) -> None:
+    try:
+        if path.exists():
+            path.unlink()
+    except Exception:
+        pass
+
+def add_autostart_desktop_app(name: str, exec_cmd: str, comment: str = "") -> Path | None:
+    AUTOSTART_DIR.mkdir(parents=True, exist_ok=True)
+    slug = re.sub(r"[^\w\-]+", "_", name.lower()).strip("_") or "custom_app"
+    target = AUTOSTART_DIR / f"{slug}.desktop"
+    idx = 1
+    while target.exists():
+        target = AUTOSTART_DIR / f"{slug}_{idx}.desktop"
+        idx += 1
+    content = f"""[Desktop Entry]
+Type=Application
+Name={name}
+Comment={comment or name}
+Exec={exec_cmd}
+Hidden=false
+Terminal=false
+X-GNOME-Autostart-enabled=true
+"""
+    try:
+        target.write_text(content, encoding="utf-8")
+        return target
+    except Exception:
+        return None
+
+def list_installed_system_apps() -> list[tuple[str, str, str]]:
+    apps: list[tuple[str, str, str]] = []
+    seen: set[str] = set()
+    for d in [Path("/usr/share/applications"), HOME / ".local/share/applications"]:
+        if d.is_dir():
+            for p in sorted(d.glob("*.desktop")):
+                try:
+                    cp = configparser.ConfigParser(interpolation=None)
+                    cp.read(p, encoding="utf-8")
+                    if "Desktop Entry" in cp:
+                        sec = cp["Desktop Entry"]
+                        name = sec.get("Name")
+                        cmd = sec.get("Exec")
+                        nodisplay = sec.getboolean("NoDisplay", fallback=False)
+                        if name and cmd and not nodisplay and name not in seen:
+                            seen.add(name)
+                            clean_cmd = " ".join([arg for arg in cmd.split() if not (arg.startswith("%") and len(arg) == 2)])
+                            apps.append((name, clean_cmd, p.stem))
+                except Exception:
+                    pass
+    return sorted(apps, key=lambda x: x[0].lower())
+
+def get_i3_autostart_status(pattern: str) -> bool:
+    if not I3_CONFIG_PATH.exists():
+        return False
+    try:
+        lines = I3_CONFIG_PATH.read_text(encoding="utf-8").splitlines()
+        regex = re.compile(r"^\s*(#\s*)?(exec|exec_always)\b.*" + pattern)
+        for l in lines:
+            m = regex.match(l)
+            if m:
+                is_commented = bool(m.group(1))
+                return not is_commented
+    except Exception:
+        pass
+    return False
+
+def set_i3_autostart_status(pattern: str, enabled: bool) -> bool:
+    if not I3_CONFIG_PATH.exists():
+        return False
+    try:
+        lines = I3_CONFIG_PATH.read_text(encoding="utf-8").splitlines()
+        regex = re.compile(r"^(\s*)(#\s*)?((exec|exec_always)\b.*" + pattern + r".*)$")
+        changed = False
+        new_lines = []
+        for l in lines:
+            m = regex.match(l)
+            if m:
+                indent = m.group(1)
+                is_commented = bool(m.group(2))
+                exec_part = m.group(3)
+                if enabled and is_commented:
+                    new_lines.append(f"{indent}{exec_part}")
+                    changed = True
+                elif not enabled and not is_commented:
+                    new_lines.append(f"{indent}# {exec_part}")
+                    changed = True
+                else:
+                    new_lines.append(l)
+            else:
+                new_lines.append(l)
+        if changed:
+            I3_CONFIG_PATH.write_text("\n".join(new_lines) + "\n", encoding="utf-8")
+            subprocess.run(["i3-msg", "reload"], check=False)
+            dotfiles_i3 = HOME / "dotfiles" / "i3" / ".config" / "i3" / "config"
+            if dotfiles_i3.exists():
+                shutil.copy2(I3_CONFIG_PATH, dotfiles_i3)
+        return changed
+    except Exception:
+        return False
+
+def get_systemd_user_service_status(service_name: str) -> tuple[bool, bool]:
+    is_enabled = False
+    is_active = False
+    try:
+        r_en = subprocess.run(["systemctl", "--user", "is-enabled", service_name], capture_output=True, text=True, check=False)
+        is_enabled = r_en.stdout.strip() == "enabled"
+        r_act = subprocess.run(["systemctl", "--user", "is-active", service_name], capture_output=True, text=True, check=False)
+        is_active = r_act.stdout.strip() == "active"
+    except Exception:
+        pass
+    return is_enabled, is_active
+
+def set_systemd_user_service_enabled(service_name: str, enabled: bool) -> None:
+    action = "enable" if enabled else "disable"
+    subprocess.run(["systemctl", "--user", action, service_name], check=False)
+
+def set_systemd_user_service_active(service_name: str, start: bool) -> None:
+    action = "start" if start else "stop"
+    subprocess.run(["systemctl", "--user", action, service_name], check=False)
 
 # ==============================================================================
 # Main Window (Material Design 3)
@@ -1986,58 +2312,381 @@ class ControlCenterWindow(Gtk.Window):
         add_class(root, "content-area")
         scrolled.add(root)
 
-        header = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
+        # Header Box with Title, Subtitle, and Add Button
+        header = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=16)
         add_class(header, "page-header")
+
+        titles_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
         title = Gtk.Label(label="Автозапуск", xalign=0)
         add_class(title, "page-title")
-        subtitle = Gtk.Label(label="Службы и приложения, запускаемые при старте сессии i3", xalign=0)
+        subtitle = Gtk.Label(label="Управление автозапуском программ, системных скриптов i3 и служб Systemd", xalign=0)
         add_class(subtitle, "page-subtitle")
-        header.pack_start(title, False, False, 0)
-        header.pack_start(subtitle, False, False, 0)
+        titles_box.pack_start(title, False, False, 0)
+        titles_box.pack_start(subtitle, False, False, 0)
+        header.pack_start(titles_box, True, True, 0)
+
+        add_app_btn = Gtk.Button(label="+ Добавить программу")
+        add_class(add_app_btn, "btn-primary")
+        add_app_btn.set_valign(Gtk.Align.CENTER)
+        add_app_btn.connect("clicked", self.on_add_autostart_app_clicked)
+        header.pack_end(add_app_btn, False, False, 0)
         root.pack_start(header, False, False, 0)
 
-        root.pack_start(self.build_section_header("Службы сессии i3wm"), False, False, 0)
-        card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
-        add_class(card, "card")
-        root.pack_start(card, False, False, 0)
+        # Category 1: Applications (XDG Autostart)
+        root.pack_start(self.build_section_header("Пользовательские приложения"), False, False, 0)
+        card_apps = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
+        add_class(card_apps, "card")
+        self.autostart_apps_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
+        card_apps.pack_start(self.autostart_apps_box, True, True, 0)
+        root.pack_start(card_apps, False, False, 0)
 
-        autostart_items = [
-            ("monitor.sh", "Автоматическая настройка мониторов и частоты обновления"),
-            ("input.sh", "Оптимизация ввода, скорости мыши и клавиатуры"),
-            ("polkit-agent.sh", "Агент аутентификации Polkit KDE"),
-            ("dunst", "Сервис всплывающих уведомлений"),
-            ("copyq", "Менеджер буфера обмена"),
-            ("spice-vdagent", "Агент общего буфера обмена для виртуальных машин"),
-            ("nm-applet", "Индикатор сети NetworkManager в трее"),
-            ("theme-apply.sh", "Применение темы обоев, палитры Pywal и GTK"),
-            ("autotiling", "Автоматическое чередование тайлинга окон i3"),
-            ("launch.sh (eww)", "Верхняя и нижняя панели виджетов EWW"),
-            ("picom", "Композитор эффектов и прозрачности"),
-        ]
+        # Category 2: i3 Session Scripts
+        root.pack_start(self.build_section_header("Скрипты сессии i3wm"), False, False, 0)
+        card_scripts = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
+        add_class(card_scripts, "card")
+        self.autostart_scripts_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
+        card_scripts.pack_start(self.autostart_scripts_box, True, True, 0)
+        root.pack_start(card_scripts, False, False, 0)
 
-        for name, desc in autostart_items:
+        # Category 3: Systemd User Services
+        root.pack_start(self.build_section_header("Службы Systemd (User Services)"), False, False, 0)
+        card_services = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
+        add_class(card_services, "card")
+        self.autostart_services_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
+        card_services.pack_start(self.autostart_services_box, True, True, 0)
+        root.pack_start(card_services, False, False, 0)
+
+        # Populate categories
+        self.populate_autostart_apps()
+        self.populate_session_scripts()
+        self.populate_systemd_services()
+
+        return scrolled
+
+    def populate_autostart_apps(self) -> None:
+        for child in self.autostart_apps_box.get_children():
+            self.autostart_apps_box.remove(child)
+
+        apps = get_autostart_desktop_apps()
+        if not apps:
+            empty_lbl = Gtk.Label(label="Нет добавленных приложений. Нажмите «+ Добавить программу» выше.", xalign=0)
+            add_class(empty_lbl, "card-row-subtitle")
+            self.autostart_apps_box.pack_start(empty_lbl, False, False, 10)
+            self.autostart_apps_box.show_all()
+            return
+
+        for idx, app in enumerate(apps):
+            if idx > 0:
+                self.autostart_apps_box.pack_start(self.build_divider(), False, False, 0)
+
             row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=14)
             add_class(row, "card-row")
 
-            text_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
-            lbl_name = Gtk.Label(label=name, xalign=0)
-            add_class(lbl_name, "card-row-title")
-            lbl_desc = Gtk.Label(label=desc, xalign=0)
-            add_class(lbl_desc, "card-row-subtitle")
-            lbl_desc.set_line_wrap(True)
-            text_box.pack_start(lbl_name, False, False, 0)
-            text_box.pack_start(lbl_desc, False, False, 0)
+            icon_img = Gtk.Image.new_from_icon_name("application-x-executable-symbolic", Gtk.IconSize.MENU)
+            row.pack_start(icon_img, False, False, 0)
+
+            tbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
+            name_lbl = Gtk.Label(label=app["name"], xalign=0)
+            add_class(name_lbl, "card-row-title")
+            cmd_lbl = Gtk.Label(label=app["exec"], xalign=0)
+            add_class(cmd_lbl, "card-row-subtitle")
+            cmd_lbl.set_line_wrap(True)
+            tbox.pack_start(name_lbl, False, False, 0)
+            tbox.pack_start(cmd_lbl, False, False, 0)
+            row.pack_start(tbox, True, True, 0)
+
+            ctrl_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
+            ctrl_box.set_valign(Gtk.Align.CENTER)
+
+            status_chip = Gtk.Label(label="Работает" if app["running"] else "Остановлено")
+            add_class(status_chip, "m3-chip-success" if app["running"] else "m3-chip")
+            ctrl_box.pack_start(status_chip, False, False, 0)
+
+            act_btn = Gtk.Button(label="Остановить" if app["running"] else "Запустить")
+            add_class(act_btn, "btn-tonal")
+            act_btn.connect("clicked", self.on_toggle_app_process, app, status_chip)
+            ctrl_box.pack_start(act_btn, False, False, 0)
+
+            del_btn = Gtk.Button(label="Удалить")
+            add_class(del_btn, "btn-outlined")
+            del_btn.connect("clicked", self.on_delete_app_clicked, app)
+            ctrl_box.pack_start(del_btn, False, False, 0)
 
             sw = Gtk.Switch()
             sw.set_valign(Gtk.Align.CENTER)
-            sw.set_active(True)
-            sw.set_sensitive(False)
+            sw.set_active(app["enabled"])
+            sw.connect("state-set", self.on_toggle_app_autostart, app)
+            ctrl_box.pack_start(sw, False, False, 0)
 
-            row.pack_start(text_box, True, True, 0)
-            row.pack_end(sw, False, False, 0)
-            card.pack_start(row, False, False, 0)
+            row.pack_end(ctrl_box, False, False, 0)
+            self.autostart_apps_box.pack_start(row, False, False, 0)
 
-        return scrolled
+        self.autostart_apps_box.show_all()
+
+    def populate_session_scripts(self) -> None:
+        for child in self.autostart_scripts_box.get_children():
+            self.autostart_scripts_box.remove(child)
+
+        for idx, item in enumerate(SESSION_SCRIPTS):
+            if idx > 0:
+                self.autostart_scripts_box.pack_start(self.build_divider(), False, False, 0)
+
+            row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=14)
+            add_class(row, "card-row")
+
+            icon_img = Gtk.Image.new_from_icon_name(item.get("icon", "system-run-symbolic"), Gtk.IconSize.MENU)
+            row.pack_start(icon_img, False, False, 0)
+
+            tbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
+            name_lbl = Gtk.Label(label=item["title"], xalign=0)
+            add_class(name_lbl, "card-row-title")
+            desc_lbl = Gtk.Label(label=item["desc"], xalign=0)
+            add_class(desc_lbl, "card-row-subtitle")
+            desc_lbl.set_line_wrap(True)
+            tbox.pack_start(name_lbl, False, False, 0)
+            tbox.pack_start(desc_lbl, False, False, 0)
+            row.pack_start(tbox, True, True, 0)
+
+            ctrl_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
+            ctrl_box.set_valign(Gtk.Align.CENTER)
+
+            is_running = is_process_running(item["proc"])
+            status_chip = Gtk.Label(label="Работает" if is_running else "Остановлен")
+            add_class(status_chip, "m3-chip-success" if is_running else "m3-chip")
+            ctrl_box.pack_start(status_chip, False, False, 0)
+
+            act_btn = Gtk.Button(label="Перезапустить" if is_running else "Запустить")
+            add_class(act_btn, "btn-tonal")
+            act_btn.connect("clicked", self.on_action_script_clicked, item, status_chip)
+            ctrl_box.pack_start(act_btn, False, False, 0)
+
+            is_enabled = get_i3_autostart_status(item["pattern"])
+            sw = Gtk.Switch()
+            sw.set_valign(Gtk.Align.CENTER)
+            sw.set_active(is_enabled)
+            sw.connect("state-set", self.on_toggle_script_autostart, item)
+            ctrl_box.pack_start(sw, False, False, 0)
+
+            row.pack_end(ctrl_box, False, False, 0)
+            self.autostart_scripts_box.pack_start(row, False, False, 0)
+
+        self.autostart_scripts_box.show_all()
+
+    def populate_systemd_services(self) -> None:
+        for child in self.autostart_services_box.get_children():
+            self.autostart_services_box.remove(child)
+
+        for idx, srv in enumerate(SYSTEMD_SERVICES):
+            if idx > 0:
+                self.autostart_services_box.pack_start(self.build_divider(), False, False, 0)
+
+            row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=14)
+            add_class(row, "card-row")
+
+            icon_img = Gtk.Image.new_from_icon_name(srv.get("icon", "preferences-system-symbolic"), Gtk.IconSize.MENU)
+            row.pack_start(icon_img, False, False, 0)
+
+            tbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
+            name_lbl = Gtk.Label(label=srv["title"], xalign=0)
+            add_class(name_lbl, "card-row-title")
+            desc_lbl = Gtk.Label(label=srv["desc"], xalign=0)
+            add_class(desc_lbl, "card-row-subtitle")
+            desc_lbl.set_line_wrap(True)
+            tbox.pack_start(name_lbl, False, False, 0)
+            tbox.pack_start(desc_lbl, False, False, 0)
+            row.pack_start(tbox, True, True, 0)
+
+            ctrl_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
+            ctrl_box.set_valign(Gtk.Align.CENTER)
+
+            is_enabled, is_active = get_systemd_user_service_status(srv["id"])
+
+            status_chip = Gtk.Label(label="Активна" if is_active else "Остановлена")
+            add_class(status_chip, "m3-chip-success" if is_active else "m3-chip")
+            ctrl_box.pack_start(status_chip, False, False, 0)
+
+            act_btn = Gtk.Button(label="Стоп" if is_active else "Старт")
+            add_class(act_btn, "btn-tonal")
+            act_btn.connect("clicked", self.on_action_service_clicked, srv, status_chip)
+            ctrl_box.pack_start(act_btn, False, False, 0)
+
+            sw = Gtk.Switch()
+            sw.set_valign(Gtk.Align.CENTER)
+            sw.set_active(is_enabled)
+            sw.connect("state-set", self.on_toggle_service_autostart, srv)
+            ctrl_box.pack_start(sw, False, False, 0)
+
+            row.pack_end(ctrl_box, False, False, 0)
+            self.autostart_services_box.pack_start(row, False, False, 0)
+
+        self.autostart_services_box.show_all()
+
+    def on_toggle_app_autostart(self, sw: Gtk.Switch, state: bool, app_info: dict) -> bool:
+        set_autostart_desktop_app_enabled(app_info["path"], state)
+        self.set_status(f"Автозапуск «{app_info['name']}»: {'включен' if state else 'отключен'}")
+        return False
+
+    def on_toggle_app_process(self, btn: Gtk.Button, app_info: dict, status_chip: Gtk.Label) -> None:
+        proc_key = app_info["proc_key"]
+        if is_process_running(proc_key):
+            subprocess.run(["pkill", "-f", proc_key], check=False)
+            status_chip.set_text("Остановлено")
+            remove_class(status_chip, "m3-chip-success")
+            add_class(status_chip, "m3-chip")
+            btn.set_label("Запустить")
+            self.set_status(f"Процесс «{app_info['name']}» остановлен")
+        else:
+            subprocess.Popen(app_info["exec"], shell=True, start_new_session=True)
+            status_chip.set_text("Работает")
+            remove_class(status_chip, "m3-chip")
+            add_class(status_chip, "m3-chip-success")
+            btn.set_label("Остановить")
+            self.set_status(f"Приложение «{app_info['name']}» запущено")
+
+    def on_delete_app_clicked(self, _btn: Gtk.Button, app_info: dict) -> None:
+        delete_autostart_desktop_app(app_info["path"])
+        self.populate_autostart_apps()
+        self.set_status(f"«{app_info['name']}» удалено из автозапуска")
+
+    def on_toggle_script_autostart(self, sw: Gtk.Switch, state: bool, item: dict) -> bool:
+        set_i3_autostart_status(item["pattern"], state)
+        self.set_status(f"Автозапуск «{item['title']}»: {'включен' if state else 'отключен'}")
+        return False
+
+    def on_action_script_clicked(self, btn: Gtk.Button, item: dict, status_chip: Gtk.Label) -> None:
+        cmd = item["cmd"]
+        proc = item["proc"]
+        if proc == "picom":
+            toggle_picom = HOME / ".config/i3/scripts/software/toggle-picom.sh"
+            if toggle_picom.exists():
+                subprocess.run([str(toggle_picom)], check=False)
+        elif proc == "dunst":
+            subprocess.run(["killall", "-9", "dunst"], check=False)
+            subprocess.Popen(["dunst"], start_new_session=True)
+        elif proc == "eww":
+            subprocess.Popen([str(HOME / ".config/eww/launch.sh"), "--restart"], start_new_session=True)
+        elif proc == "copyq":
+            if is_process_running("copyq"):
+                subprocess.run(["killall", "copyq"], check=False)
+            else:
+                subprocess.Popen(["copyq"], start_new_session=True)
+        else:
+            subprocess.Popen(cmd, shell=True, start_new_session=True)
+
+        GLib.timeout_add(600, lambda: (self.update_script_status(item, btn, status_chip), False)[1])
+        self.set_status(f"Команда «{item['title']}» выполнена")
+
+    def update_script_status(self, item: dict, btn: Gtk.Button, status_chip: Gtk.Label) -> None:
+        running = is_process_running(item["proc"])
+        status_chip.set_text("Работает" if running else "Остановлен")
+        if running:
+            remove_class(status_chip, "m3-chip")
+            add_class(status_chip, "m3-chip-success")
+            btn.set_label("Перезапустить")
+        else:
+            remove_class(status_chip, "m3-chip-success")
+            add_class(status_chip, "m3-chip")
+            btn.set_label("Запустить")
+
+    def on_toggle_service_autostart(self, sw: Gtk.Switch, state: bool, srv: dict) -> bool:
+        set_systemd_user_service_enabled(srv["id"], state)
+        self.set_status(f"Служба {srv['id']}: {'включена' if state else 'отключена'}")
+        return False
+
+    def on_action_service_clicked(self, btn: Gtk.Button, srv: dict, status_chip: Gtk.Label) -> None:
+        _, is_active = get_systemd_user_service_status(srv["id"])
+        set_systemd_user_service_active(srv["id"], not is_active)
+        new_active = not is_active
+        status_chip.set_text("Активна" if new_active else "Остановлена")
+        if new_active:
+            remove_class(status_chip, "m3-chip")
+            add_class(status_chip, "m3-chip-success")
+            btn.set_label("Стоп")
+        else:
+            remove_class(status_chip, "m3-chip-success")
+            add_class(status_chip, "m3-chip")
+            btn.set_label("Старт")
+        self.set_status(f"Служба {srv['id']} {'запущена' if new_active else 'остановлена'}")
+
+    def on_add_autostart_app_clicked(self, _btn: Gtk.Button) -> None:
+        dialog = Gtk.Dialog(
+            title="Добавить программу в автозапуск",
+            parent=self,
+            flags=Gtk.DialogFlags.MODAL | Gtk.DialogFlags.DESTROY_WITH_PARENT,
+        )
+        dialog.set_default_size(520, 360)
+        add_class(dialog, "control-center-window")
+
+        content_area = dialog.get_content_area()
+        add_class(content_area, "content-area")
+        content_area.set_spacing(16)
+
+        d_title = Gtk.Label(label="Добавить программу", xalign=0)
+        add_class(d_title, "page-title")
+        content_area.pack_start(d_title, False, False, 0)
+
+        d_sub = Gtk.Label(label="Выберите установленную программу или укажите название и команду вручную.", xalign=0)
+        add_class(d_sub, "card-row-subtitle")
+        d_sub.set_line_wrap(True)
+        content_area.pack_start(d_sub, False, False, 0)
+
+        form_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
+        add_class(form_box, "card")
+        content_area.pack_start(form_box, True, True, 0)
+
+        combo_lbl = Gtk.Label(label="Установленная программа:", xalign=0)
+        add_class(combo_lbl, "card-row-subtitle")
+        form_box.pack_start(combo_lbl, False, False, 0)
+
+        apps_combo = Gtk.ComboBoxText()
+        installed_apps = list_installed_system_apps()
+        apps_combo.append_text("— Выбрать из списка программ —")
+        for app_name, _, _ in installed_apps:
+            apps_combo.append_text(app_name)
+        apps_combo.set_active(0)
+        form_box.pack_start(apps_combo, False, False, 0)
+
+        name_lbl = Gtk.Label(label="Название приложения:", xalign=0)
+        add_class(name_lbl, "card-row-subtitle")
+        name_entry = Gtk.Entry()
+        name_entry.set_placeholder_text("Например: Zen Browser")
+        form_box.pack_start(name_lbl, False, False, 0)
+        form_box.pack_start(name_entry, False, False, 0)
+
+        cmd_lbl = Gtk.Label(label="Команда запуска:", xalign=0)
+        add_class(cmd_lbl, "card-row-subtitle")
+        cmd_entry = Gtk.Entry()
+        cmd_entry.set_placeholder_text("Например: zen-browser")
+        form_box.pack_start(cmd_lbl, False, False, 0)
+        form_box.pack_start(cmd_entry, False, False, 0)
+
+        def on_combo_changed(combo: Gtk.ComboBoxText) -> None:
+            idx = combo.get_active()
+            if idx > 0 and idx <= len(installed_apps):
+                sel_name, sel_cmd, _ = installed_apps[idx - 1]
+                name_entry.set_text(sel_name)
+                cmd_entry.set_text(sel_cmd)
+
+        apps_combo.connect("changed", on_combo_changed)
+
+        dialog.add_button("Отмена", Gtk.ResponseType.CANCEL)
+        add_btn = dialog.add_button("Добавить", Gtk.ResponseType.OK)
+        add_class(add_btn, "btn-primary")
+
+        cancel_btn = dialog.get_widget_for_response(Gtk.ResponseType.CANCEL)
+        if cancel_btn:
+            add_class(cancel_btn, "btn-tonal")
+
+        dialog.show_all()
+        response = dialog.run()
+        if response == Gtk.ResponseType.OK:
+            name = name_entry.get_text().strip()
+            cmd = cmd_entry.get_text().strip()
+            if name and cmd:
+                add_autostart_desktop_app(name, cmd)
+                self.populate_autostart_apps()
+                self.set_status(f"Приложение «{name}» добавлено в автозапуск")
+        dialog.destroy()
 
     # --------------------------------------------------------------------------
     # Page 7: Shortcuts
