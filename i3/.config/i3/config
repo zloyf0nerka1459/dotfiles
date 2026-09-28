@@ -108,7 +108,8 @@ bindsym Shift+Print exec --no-startup-id ~/.config/i3/scripts/software/screensho
 # === 9. Правила Окон (for_window) ===
 for_window [class="Rofi"] floating enable, border pixel 0
 for_window [class="(?i)polkit"] floating enable
-for_window [class="(?i)system-control-center"] floating enable, resize set 1140 760, move position center
+for_window [instance="(?i)system-control-center"] floating enable, resize set 1180 780, move position center
+for_window [class="(?i)system.*control.*center.*"] floating enable, resize set 1180 780, move position center
 for_window [class="Polkit-kde-authentication-agent-1"] floating enable
 for_window [class="Polkit-gnome-authentication-agent-1"] floating enable
 for_window [class="i3-cheatsheet"] floating enable, move position center

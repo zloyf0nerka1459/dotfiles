@@ -121,6 +121,11 @@ if [ -x "$HOME/.config/i3/scripts/software/update-gtk-theme.py" ]; then
     "$HOME/.config/i3/scripts/software/update-gtk-theme.py" >/dev/null 2>&1 || true
 fi
 
+if command -v gsettings >/dev/null 2>&1; then
+    gsettings set org.gnome.desktop.interface gtk-theme "FlatColor" 2>/dev/null || true
+    gsettings set org.gnome.desktop.interface color-scheme "prefer-dark" 2>/dev/null || true
+fi
+
 if command -v xsettingsd >/dev/null 2>&1; then
     killall xsettingsd 2>/dev/null || true
     sleep 0.1

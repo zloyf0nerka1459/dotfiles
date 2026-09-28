@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 # ==============================================================================
-# System Control Center — Material Design 3 (Google M3)
+# System Control Center — Google Material Design 3 (M3)
 # Specification: https://m3.material.io/
 # ==============================================================================
 
+import colorsys
 import json
 import os
 import platform
@@ -33,306 +34,586 @@ THEMES_DIR = CONFIG_HOME / "themes"
 XRESOURCES_PATH = HOME / ".Xresources"
 
 # ==============================================================================
-# Material Design 3 (M3) CSS Tokens & Rules
+# Material Design 3 (M3) — Material You Dynamic Theming System
+# Specification: https://m3.material.io/styles/color/roles
 # ==============================================================================
-APP_CSS = """
-/* Material Design 3 Baseline Dark Palette */
-window.control-center-window {
-    background-color: #111318;
-    color: #e2e2e9;
-    font-family: "Noto Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-}
 
-/* --- M3 Navigation Drawer / Sidebar --- */
-.sidebar {
-    background-color: #111318;
-    border-right: 1px solid #282a2f;
-    padding: 16px 12px;
-}
+def hex_to_rgb(h: str) -> tuple[float, float, float]:
+    h = h.lstrip("#")
+    if len(h) == 3:
+        h = "".join(c * 2 for c in h)
+    return tuple(int(h[i:i+2], 16) / 255.0 for i in (0, 2, 4))  # type: ignore
 
-.sidebar-title {
-    font-size: 20px;
-    font-weight: 700;
-    color: #e2e2e9;
-    margin-left: 14px;
-    margin-bottom: 2px;
-}
+def rgb_to_hex(r: float, g: float, b: float) -> str:
+    return f"#{int(round(max(0.0, min(1.0, r)) * 255)):02x}{int(round(max(0.0, min(1.0, g)) * 255)):02x}{int(round(max(0.0, min(1.0, b)) * 255)):02x}"
 
-.sidebar-subtitle {
-    font-size: 12px;
-    color: #8e9099;
-    margin-left: 14px;
-    margin-bottom: 16px;
-}
+def hex_to_hsl(h: str) -> tuple[float, float, float]:
+    r, g, b = hex_to_rgb(h)
+    return colorsys.rgb_to_hls(r, g, b)
 
-/* M3 Search Bar */
-.m3-search {
-    background-color: #282a2f;
-    color: #e2e2e9;
-    border-radius: 9999px;
+def hsl_to_hex(h: float, l: float, s: float) -> str:
+    r, g, b = colorsys.hls_to_rgb(h, max(0.0, min(1.0, l)), max(0.0, min(1.0, s)))
+    return rgb_to_hex(r, g, b)
+
+def get_m3_dynamic_palette() -> dict[str, Any]:
+    """Generates canonical Google Material Design 3 (Material You) tokens from the wallpaper / Pywal palette."""
+    wal_path = Path.home() / ".cache" / "wal" / "colors.json"
+    data: dict[str, Any] = {}
+    if wal_path.exists():
+        try:
+            with open(wal_path, encoding="utf-8") as f:
+                data = json.load(f)
+        except Exception:
+            pass
+
+    colors = data.get("colors", {})
+    special = data.get("special", {})
+
+    bg_hex = special.get("background", colors.get("color0", "#111318"))
+    fg_hex = special.get("foreground", colors.get("color15", "#e2e2e9"))
+
+    # Choose best accent color from candidate palette
+    candidate_keys = ["color4", "color2", "color5", "color1", "color6", "color3"]
+    best_accent = "#a8c7fa"
+    best_score = -1.0
+    for k in candidate_keys:
+        val = colors.get(k)
+        if not val or not val.startswith("#") or len(val) < 7:
+            continue
+        h, l, s = hex_to_hsl(val)
+        score = s * 1.5 + (0.5 - abs(l - 0.5))
+        if score > best_score:
+            best_score = score
+            best_accent = val
+
+    bg_h, bg_l, bg_s = hex_to_hsl(bg_hex)
+    acc_h, acc_l, acc_s = hex_to_hsl(best_accent)
+
+    sec_accent = colors.get("color2", colors.get("color5", best_accent))
+    sec_h, sec_l, sec_s = hex_to_hsl(sec_accent)
+
+    # In M3 dark theme, Primary has tone ~80% (lightness 0.78-0.82) for clear WCAG contrast
+    primary = hsl_to_hex(acc_h, 0.80, max(acc_s, 0.65))
+    on_primary = hsl_to_hex(acc_h, 0.14, max(acc_s, 0.65))
+    primary_hover = hsl_to_hex(acc_h, 0.86, max(acc_s, 0.65))
+
+    p_r, p_g, p_b = hex_to_rgb(primary)
+
+    palette = {
+        "surface": hsl_to_hex(bg_h, 0.08, min(bg_s, 0.18)),
+        "surface_container_lowest": hsl_to_hex(bg_h, 0.05, min(bg_s, 0.18)),
+        "surface_container_low": hsl_to_hex(bg_h, 0.11, min(bg_s, 0.18)),
+        "surface_container": hsl_to_hex(bg_h, 0.14, min(bg_s, 0.16)),
+        "surface_container_high": hsl_to_hex(bg_h, 0.17, min(bg_s, 0.16)),
+        "surface_container_highest": hsl_to_hex(bg_h, 0.21, min(bg_s, 0.14)),
+
+        "primary": primary,
+        "on_primary": on_primary,
+        "primary_hover": primary_hover,
+        "primary_rgb": f"{int(p_r*255)}, {int(p_g*255)}, {int(p_b*255)}",
+
+        "primary_container": hsl_to_hex(acc_h, 0.28, max(acc_s, 0.45)),
+        "on_primary_container": hsl_to_hex(acc_h, 0.90, max(acc_s, 0.45)),
+
+        "secondary": hsl_to_hex(sec_h, 0.76, min(sec_s, 0.50)),
+        "secondary_container": hsl_to_hex(acc_h, 0.25, min(acc_s * 0.65, 0.35)),
+        "on_secondary_container": hsl_to_hex(acc_h, 0.92, min(acc_s * 0.4, 0.25)),
+
+        "on_surface": hsl_to_hex(bg_h, 0.92, min(bg_s * 0.2, 0.10)),
+        "on_surface_variant": hsl_to_hex(bg_h, 0.68, min(bg_s * 0.3, 0.15)),
+        "outline": hsl_to_hex(bg_h, 0.40, min(bg_s * 0.3, 0.15)),
+        "outline_variant": hsl_to_hex(bg_h, 0.22, min(bg_s * 0.3, 0.12)),
+
+        "seed_accent": best_accent,
+        "wallpaper": data.get("wallpaper", "")
+    }
+    return palette
+
+def generate_m3_css(p: dict[str, Any]) -> str:
+    """Generates full Gtk3 CSS adhering strictly to Google Material Design 3 and Material You Dynamic Tokens."""
+    return f"""
+/* Material Design 3 (Google M3) Dynamic Material You Theme */
+window.control-center-window {{
+    background-color: {p['surface']};
+    color: {p['on_surface']};
+    font-family: "Roboto", "Noto Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}}
+
+/* Base widget reset to eliminate GTK default theme artifacts */
+list,
+list row,
+list row:selected,
+list row:selected:focus,
+list row:selected:hover {{
+    background-color: transparent;
     border: none;
-    padding: 10px 18px;
+    box-shadow: none;
+    outline: none;
+}}
+
+scrolledwindow,
+viewport {{
+    background-color: {p['surface']};
+    border: none;
+    box-shadow: none;
+    outline: none;
+}}
+
+.m3-nav-drawer scrolledwindow,
+.m3-nav-drawer viewport {{
+    background-color: transparent;
+    border: none;
+}}
+
+/* --- M3 Navigation Drawer (Sidebar) --- */
+.m3-nav-drawer {{
+    background-color: {p['surface_container_low']};
+    border-right: 1px solid rgba(255, 255, 255, 0.05);
+    padding: 24px 16px;
+}}
+
+.m3-app-icon {{
+    color: {p['primary']};
+    margin-left: 4px;
+}}
+
+.m3-app-title {{
+    font-size: 22px;
+    font-weight: 700;
+    color: {p['on_surface']};
+    letter-spacing: -0.2px;
+}}
+
+.m3-app-subtitle {{
+    font-size: 12px;
+    color: {p['on_surface_variant']};
+    margin-bottom: 20px;
+}}
+
+/* M3 Search Bar (surface-container-high) */
+.m3-search {{
+    background-color: {p['surface_container_high']};
+    color: {p['on_surface']};
+    border-radius: 9999px;
+    border: 1px solid {p['outline_variant']};
+    padding: 10px 16px;
     font-size: 13px;
-    margin-bottom: 14px;
-}
+    margin-bottom: 18px;
+    box-shadow: none;
+}}
 
-.m3-search:focus {
-    background-color: #33353a;
-    box-shadow: inset 0 0 0 1px #a8c7fa;
-}
+.m3-search:focus {{
+    background-color: {p['surface_container_highest']};
+    border-color: {p['primary']};
+    box-shadow: 0 0 0 1px {p['primary']};
+}}
 
-.sidebar-category {
+/* M3 Drawer Category Section Headers (Overlines) */
+.m3-drawer-category {{
     font-size: 11px;
     font-weight: 700;
-    color: #a8c7fa;
-    padding: 14px 14px 6px 14px;
-}
+    color: {p['primary']};
+    letter-spacing: 0.6px;
+    padding: 16px 14px 6px 14px;
+}}
 
 /* M3 Navigation Pill */
-.sidebar-item {
-    padding: 10px 18px;
+.m3-drawer-item {{
+    padding: 12px 18px;
     border-radius: 9999px;
-    color: #c4c6d0;
-    font-size: 13px;
+    color: {p['on_surface_variant']};
+    font-size: 14px;
     font-weight: 500;
-    margin-bottom: 2px;
+    margin: 2px 0;
     background-color: transparent;
     transition: background-color 150ms ease, color 150ms ease;
-}
+}}
 
-.sidebar-item:hover {
-    background-color: rgba(226, 226, 233, 0.08);
-    color: #e2e2e9;
-}
+.m3-drawer-item image {{
+    color: {p['on_surface_variant']};
+}}
 
-.sidebar-item.active {
-    background-color: #004a77;
-    color: #dbe4f6;
+.m3-drawer-item:hover {{
+    background-color: rgba(255, 255, 255, 0.08);
+    color: {p['on_surface']};
+}}
+
+.m3-drawer-item:hover image {{
+    color: {p['on_surface']};
+}}
+
+.m3-drawer-item.active,
+.m3-drawer-item.active:selected,
+.m3-drawer-item.active:focus {{
+    background-color: {p['secondary_container']};
+    color: {p['on_secondary_container']};
     font-weight: 600;
-}
+}}
+
+.m3-drawer-item.active image,
+.m3-drawer-item.active:selected image,
+.m3-drawer-item.active:focus image {{
+    color: {p['on_secondary_container']};
+}}
 
 /* --- M3 Content Surface --- */
-.content-area {
-    padding: 28px 36px;
-    background-color: #111318;
-}
+.content-area {{
+    padding: 36px 44px;
+    background-color: {p['surface']};
+}}
 
-.page-header {
-    margin-bottom: 24px;
-}
+.page-header {{
+    margin-bottom: 28px;
+}}
 
-.page-title {
-    font-size: 26px;
+.page-title {{
+    font-size: 30px;
     font-weight: 700;
-    color: #e2e2e9;
-}
+    color: {p['on_surface']};
+    letter-spacing: -0.3px;
+}}
 
-.page-subtitle {
-    font-size: 13px;
-    color: #8e9099;
-    margin-top: 4px;
-}
+.page-subtitle {{
+    font-size: 14px;
+    color: {p['on_surface_variant']};
+    margin-top: 6px;
+}}
+
+/* --- M3 Section Header (Overline) --- */
+.section-header-label {{
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    color: {p['primary']};
+    margin-left: 8px;
+    margin-bottom: 10px;
+    margin-top: 14px;
+}}
 
 /* --- M3 Cards (Surface Container) --- */
-.card {
-    background-color: #1d2024;
-    border-radius: 16px;
-    border: 1px solid rgba(255, 255, 255, 0.05);
-    padding: 22px 24px;
-    margin-bottom: 18px;
-}
+.card {{
+    background-color: {p['surface_container']};
+    border-radius: 24px;
+    border: 1px solid {p['outline_variant']};
+    padding: 24px 28px;
+    margin-bottom: 22px;
+}}
 
-.card-title {
+.card-title {{
     font-size: 16px;
     font-weight: 600;
-    color: #e2e2e9;
-}
+    color: {p['on_surface']};
+}}
 
-.card-subtitle {
+.card-subtitle {{
     font-size: 13px;
-    color: #8e9099;
+    color: {p['on_surface_variant']};
     margin-top: 4px;
-    margin-bottom: 16px;
-}
+    margin-bottom: 18px;
+}}
 
-.card-row {
-    padding: 10px 0;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-}
+.card-row {{
+    padding: 14px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}}
 
-.card-row:last-child {
+.card-row:last-child {{
     border-bottom: none;
-}
+}}
 
-/* --- M3 Buttons --- */
+separator.card-divider {{
+    background-color: {p['outline_variant']};
+    min-height: 1px;
+    margin: 18px 0;
+    border: none;
+}}
+
+.card-row-title {{
+    font-size: 15px;
+    font-weight: 500;
+    color: {p['on_surface']};
+}}
+
+.card-row-subtitle {{
+    font-size: 13px;
+    color: {p['on_surface_variant']};
+    margin-top: 3px;
+}}
+
+/* --- M3 Segmented Button --- */
+.m3-segmented-box {{
+    background-color: {p['surface_container_low']};
+    border: 1px solid {p['outline_variant']};
+    border-radius: 9999px;
+    padding: 4px;
+}}
+
+.m3-segment-btn {{
+    border-radius: 9999px;
+    padding: 9px 26px;
+    font-size: 13px;
+    font-weight: 500;
+    color: {p['on_surface_variant']};
+    background-color: transparent;
+    border: none;
+    box-shadow: none;
+    transition: all 150ms ease;
+}}
+
+.m3-segment-btn:hover {{
+    background-color: rgba(255, 255, 255, 0.08);
+    color: {p['on_surface']};
+}}
+
+.m3-segment-btn.active {{
+    background-color: {p['secondary_container']};
+    color: {p['on_secondary_container']};
+    font-weight: 600;
+}}
+
+/* --- M3 Canonical Buttons --- */
 button.suggested-action,
-.btn-primary {
-    background-color: #a8c7fa;
-    color: #062e6f;
+.btn-primary {{
+    background-color: {p['primary']};
+    color: {p['on_primary']};
     font-weight: 600;
     font-size: 13px;
     border-radius: 9999px;
-    padding: 8px 22px;
+    padding: 10px 24px;
     border: none;
     box-shadow: none;
-}
+}}
 
 button.suggested-action:hover,
-.btn-primary:hover {
-    background-color: #c2d7fc;
-    color: #042152;
-}
+.btn-primary:hover {{
+    background-color: {p['primary_hover']};
+    color: {p['on_primary']};
+}}
 
 button,
-.btn-tonal {
-    background-color: #282a2f;
-    color: #e2e2e9;
+.btn-tonal {{
+    background-color: {p['surface_container_high']};
+    color: {p['on_surface']};
     font-weight: 500;
     font-size: 13px;
     border-radius: 9999px;
-    padding: 8px 18px;
-    border: none;
+    padding: 9px 20px;
+    border: 1px solid {p['outline_variant']};
     box-shadow: none;
-}
+}}
 
 button:hover,
-.btn-tonal:hover {
-    background-color: #33353a;
+.btn-tonal:hover {{
+    background-color: {p['surface_container_highest']};
     color: #ffffff;
-}
+    border-color: rgba(255, 255, 255, 0.16);
+}}
+
+.btn-outlined {{
+    background-color: transparent;
+    color: {p['primary']};
+    font-weight: 500;
+    font-size: 13px;
+    border-radius: 9999px;
+    padding: 8px 20px;
+    border: 1px solid {p['outline']};
+    box-shadow: none;
+}}
+
+.btn-outlined:hover {{
+    background-color: rgba({p['primary_rgb']}, 0.08);
+    border-color: {p['primary']};
+}}
 
 /* --- M3 Chips & Badges --- */
 .badge-tag,
-.m3-chip {
-    background-color: #004a77;
-    color: #dbe4f6;
+.m3-chip {{
+    background-color: {p['surface_container_high']};
+    border: 1px solid {p['outline_variant']};
+    color: {p['primary']};
     border-radius: 9999px;
-    padding: 4px 12px;
+    padding: 5px 14px;
     font-size: 12px;
     font-weight: 600;
-}
+}}
 
 .badge-green,
-.m3-chip-success {
-    background-color: rgba(46, 125, 50, 0.25);
-    color: #a5d6a7;
+.m3-chip-success {{
+    background-color: rgba(76, 175, 80, 0.14);
+    border: 1px solid rgba(76, 175, 80, 0.35);
+    color: #81c784;
     border-radius: 9999px;
-    padding: 4px 12px;
+    padding: 5px 14px;
     font-size: 12px;
     font-weight: 600;
-}
+}}
 
 .badge-amber,
-.m3-chip-warning {
-    background-color: rgba(239, 108, 0, 0.25);
-    color: #ffcc80;
+.m3-chip-warning {{
+    background-color: rgba(255, 152, 0, 0.14);
+    border: 1px solid rgba(255, 152, 0, 0.35);
+    color: #ffb74d;
     border-radius: 9999px;
-    padding: 4px 12px;
+    padding: 5px 14px;
     font-size: 12px;
     font-weight: 600;
-}
+}}
 
-/* --- M3 Inputs --- */
-entry {
-    background-color: #282a2f;
-    color: #e2e2e9;
-    border-radius: 8px;
-    border: 1px solid #44474f;
-    padding: 8px 12px;
-}
+/* --- M3 Controls & Inputs --- */
+entry {{
+    background-color: {p['surface_container_highest']};
+    color: {p['on_surface']};
+    border-radius: 12px;
+    border: 1px solid {p['outline_variant']};
+    padding: 9px 16px;
+    box-shadow: none;
+}}
 
-entry:focus {
-    border-color: #a8c7fa;
-    background-color: #33353a;
-}
+entry:focus {{
+    border-color: {p['primary']};
+    background-color: {p['surface_container_highest']};
+    box-shadow: 0 0 0 1px {p['primary']};
+}}
 
-combobox button.combo {
-    background-color: #282a2f;
-    color: #e2e2e9;
-    border-radius: 8px;
-    border: 1px solid #44474f;
-    padding: 6px 12px;
-}
+combobox button.combo {{
+    background-color: {p['surface_container_high']};
+    color: {p['on_surface']};
+    border-radius: 12px;
+    border: 1px solid {p['outline_variant']};
+    padding: 8px 16px;
+    box-shadow: none;
+}}
+
+combobox button.combo:hover {{
+    border-color: {p['outline']};
+    background-color: {p['surface_container_highest']};
+}}
 
 /* --- M3 Switch --- */
-switch {
+switch {{
     border-radius: 9999px;
-    background-color: #33353a;
-    border: 1px solid #44474f;
-    min-width: 48px;
-    min-height: 26px;
-}
+    background-color: {p['surface_container_highest']};
+    border: 1px solid {p['outline']};
+    min-width: 52px;
+    min-height: 28px;
+    padding: 2px;
+    box-shadow: none;
+}}
 
-switch:checked {
-    background-color: #a8c7fa;
-    border-color: #a8c7fa;
-}
+switch:checked {{
+    background-color: {p['primary']};
+    border-color: {p['primary']};
+}}
 
-switch slider {
+switch slider {{
     border-radius: 9999px;
-    background-color: #8e9099;
-    min-width: 20px;
-    min-height: 20px;
-}
-
-switch:checked slider {
-    background-color: #062e6f;
-}
-
-/* --- M3 Sliders --- */
-scale trough {
-    background-color: #33353a;
-    border-radius: 9999px;
-    min-height: 8px;
-}
-
-scale highlight {
-    background-color: #a8c7fa;
-    border-radius: 9999px;
-}
-
-scale slider {
-    background-color: #a8c7fa;
-    border-radius: 9999px;
+    background-color: {p['outline']};
     min-width: 18px;
     min-height: 18px;
-}
+    margin: 3px;
+    box-shadow: none;
+}}
+
+switch:checked slider {{
+    background-color: {p['on_primary']};
+    min-width: 22px;
+    min-height: 22px;
+    margin: 1px;
+}}
+
+/* --- M3 Sliders --- */
+scale trough {{
+    background-color: {p['surface_container_highest']};
+    border-radius: 9999px;
+    min-height: 8px;
+    border: none;
+    box-shadow: none;
+}}
+
+scale highlight {{
+    background-color: {p['primary']};
+    border-radius: 9999px;
+    min-height: 8px;
+    border: none;
+    box-shadow: none;
+}}
+
+scale slider {{
+    background-color: {p['primary']};
+    background-image: none;
+    border-radius: 9999px;
+    border: none;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.45);
+    min-width: 20px;
+    min-height: 20px;
+    margin: -6px 0;
+}}
+
+scale slider:hover {{
+    background-color: {p['primary_hover']};
+    box-shadow: 0 0 0 6px rgba({p['primary_rgb']}, 0.18);
+}}
 
 /* --- M3 Test Pad --- */
-.test-pad {
-    background-color: #191c20;
-    border: 1px solid #44474f;
-    border-radius: 16px;
+.test-pad {{
+    background-color: {p['surface_container_low']};
+    border: 1px solid {p['outline_variant']};
+    border-radius: 18px;
     padding: 24px;
-}
+}}
 
-.test-pad:hover {
-    border-color: #8e9099;
-    background-color: #1d2024;
-}
+.test-pad:hover {{
+    border-color: {p['outline']};
+    background-color: {p['surface_container']};
+}}
 
-.mouse-btn-indicator {
-    padding: 6px 16px;
+.mouse-btn-indicator {{
+    padding: 7px 18px;
     border-radius: 9999px;
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 600;
-    background-color: #282a2f;
-    color: #8e9099;
-}
+    background-color: {p['surface_container_high']};
+    border: 1px solid {p['outline_variant']};
+    color: {p['on_surface_variant']};
+}}
 
-.mouse-btn-indicator.active {
-    background-color: #a8c7fa;
-    color: #062e6f;
+.mouse-btn-indicator.active {{
+    background-color: {p['primary']};
+    border-color: {p['primary']};
+    color: {p['on_primary']};
     font-weight: 700;
-}
+}}
 
 /* Status Bar */
-.status-bar {
-    background-color: #111318;
-    border-top: 1px solid #282a2f;
-    padding: 12px 24px;
-}
+.status-bar {{
+    background-color: {p['surface_container_low']};
+    border-top: 1px solid {p['outline_variant']};
+    padding: 12px 32px;
+}}
 """
+
+CURRENT_CSS_PROVIDER: Gtk.CssProvider | None = None
+CURRENT_PALETTE: dict[str, Any] = {}
+
+def apply_m3_theme() -> dict[str, Any]:
+    """Applies dynamic Material Design 3 tokens to the active GTK style provider."""
+    global CURRENT_CSS_PROVIDER, CURRENT_PALETTE
+    CURRENT_PALETTE = get_m3_dynamic_palette()
+    css_content = generate_m3_css(CURRENT_PALETTE)
+    if CURRENT_CSS_PROVIDER is None:
+        CURRENT_CSS_PROVIDER = Gtk.CssProvider()
+        screen = Gdk.Screen.get_default()
+        if screen:
+            Gtk.StyleContext.add_provider_for_screen(
+                screen,
+                CURRENT_CSS_PROVIDER,
+                Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION,
+            )
+    CURRENT_CSS_PROVIDER.load_from_data(css_content.encode("utf-8"))
+    return CURRENT_PALETTE
+
+def load_css() -> None:
+    apply_m3_theme()
 
 def add_class(widget: Gtk.Widget, *classes: str) -> Gtk.Widget:
     ctx = widget.get_style_context()
@@ -346,17 +627,6 @@ def remove_class(widget: Gtk.Widget, *classes: str) -> Gtk.Widget:
         ctx.remove_class(c)
     return widget
 
-def load_css() -> None:
-    provider = Gtk.CssProvider()
-    provider.load_from_data(APP_CSS.encode("utf-8"))
-    screen = Gdk.Screen.get_default()
-    if screen:
-        Gtk.StyleContext.add_provider_for_screen(
-            screen,
-            provider,
-            Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION,
-        )
-
 def ensure_dirs() -> None:
     for path in (CONFIG_HOME, DATA_DIR, BACKUPS_DIR, AUTOSTART_DIR):
         path.mkdir(parents=True, exist_ok=True)
@@ -365,7 +635,7 @@ def run_command(command: list[str], check: bool = False) -> subprocess.Completed
     return subprocess.run(command, text=True, capture_output=True, check=check)
 
 # ==============================================================================
-# Device Models & Helpers
+# Device Models & State
 # ==============================================================================
 @dataclass
 class PointerDevice:
@@ -398,7 +668,6 @@ def list_pointer_devices() -> list[PointerDevice]:
             if m:
                 name = m.group(1).strip()
                 dev_id = int(m.group(2))
-                # Filter out virtual XTEST and control endpoints
                 if any(bad in name.lower() for bad in ["xtest", "consumer control", "system control"]):
                     continue
                 dev = get_pointer_device(dev_id, name)
@@ -482,7 +751,7 @@ def save_all_input_settings(devices: list[PointerDevice], layouts: str, switch_o
     lines = [
         "#!/usr/bin/env bash",
         "# ==============================================================================",
-        "# Auto-generated by System Control Center (Material Design 3)",
+        "# Auto-generated by System Control Center (Google Material Design 3)",
         "# ==============================================================================",
         "set -u",
         '[ -n "${DISPLAY:-}" ] || exit 0',
@@ -640,14 +909,14 @@ def get_current_theme() -> str:
     return "ghibli-serenity"
 
 # ==============================================================================
-# Main Application Window (Material Design 3)
+# Main Window (Material Design 3)
 # ==============================================================================
 class ControlCenterWindow(Gtk.Window):
     def __init__(self) -> None:
         super().__init__(title="Параметры системы")
         ensure_dirs()
         add_class(self, "control-center-window")
-        self.set_default_size(1140, 760)
+        self.set_default_size(1180, 780)
         self.set_position(Gtk.WindowPosition.CENTER)
         self.connect("destroy", Gtk.main_quit)
 
@@ -671,7 +940,7 @@ class ControlCenterWindow(Gtk.Window):
         content_panes = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=0)
         main_box.pack_start(content_panes, True, True, 0)
 
-        # Left Sidebar (M3 Navigation Drawer)
+        # M3 Navigation Drawer (Sidebar)
         self.sidebar_box = self.build_sidebar()
         content_panes.pack_start(self.sidebar_box, False, False, 0)
 
@@ -681,7 +950,7 @@ class ControlCenterWindow(Gtk.Window):
         self.stack.set_transition_duration(150)
         content_panes.pack_start(self.stack, True, True, 0)
 
-        # Build Pages (Clean M3 — No superfluous emojis)
+        # Build Pages (Pure M3 Architecture — Symbolic Icons, No Emojis)
         self.page_mouse = self.build_mouse_page()
         self.page_keyboard = self.build_keyboard_page()
         self.page_displays = self.build_displays_page()
@@ -707,6 +976,36 @@ class ControlCenterWindow(Gtk.Window):
         self.loading = False
         self.select_page("mouse")
 
+        # Material You Dynamic Theming Monitor
+        self.wal_colors_path = Path.home() / ".cache" / "wal" / "colors.json"
+        self.last_wal_mtime = self.wal_colors_path.stat().st_mtime if self.wal_colors_path.exists() else 0.0
+        GLib.timeout_add_seconds(2, self.check_wal_colors_updated)
+
+    def check_wal_colors_updated(self) -> bool:
+        if self.wal_colors_path.exists():
+            try:
+                mtime = self.wal_colors_path.stat().st_mtime
+                if mtime > self.last_wal_mtime:
+                    self.last_wal_mtime = mtime
+                    self.reload_material_you_palette(notify=True)
+            except Exception:
+                pass
+        return True
+
+    def reload_material_you_palette(self, notify: bool = False) -> None:
+        pal = apply_m3_theme()
+        if hasattr(self, "m3_primary_badge") and self.m3_primary_badge:
+            self.m3_primary_badge.set_text(f"Акцент: {pal['primary']}")
+        if hasattr(self, "m3_surface_badge") and self.m3_surface_badge:
+            self.m3_surface_badge.set_text(f"Фон: {pal['surface']}")
+        if hasattr(self, "m3_wall_badge") and self.m3_wall_badge:
+            wall_name = Path(pal.get("wallpaper", "")).name or "Обои рабочего стола"
+            self.m3_wall_badge.set_text(wall_name)
+        if hasattr(self, "cur_theme_badge") and self.cur_theme_badge:
+            self.cur_theme_badge.set_text(get_current_theme())
+        if notify:
+            self.set_status(f"Палитра Material You синхронизирована (Акцент: {pal['primary']})")
+
     def load_saved_profile(self) -> None:
         if INPUT_PROFILE_PATH.exists():
             try:
@@ -724,16 +1023,25 @@ class ControlCenterWindow(Gtk.Window):
     # --------------------------------------------------------------------------
     def build_sidebar(self) -> Gtk.Box:
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
-        add_class(box, "sidebar")
-        box.set_size_request(260, -1)
+        add_class(box, "m3-nav-drawer")
+        box.set_size_request(280, -1)
 
+        # Header with App Icon and Titles
+        head_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
+        head_icon = Gtk.Image.new_from_icon_name("preferences-system-symbolic", Gtk.IconSize.LARGE_TOOLBAR)
+        add_class(head_icon, "m3-app-icon")
+
+        titles_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
         title = Gtk.Label(label="Параметры", xalign=0)
-        add_class(title, "sidebar-title")
-        box.pack_start(title, False, False, 0)
+        add_class(title, "m3-app-title")
+        subtitle = Gtk.Label(label="Центр управления i3wm", xalign=0)
+        add_class(subtitle, "m3-app-subtitle")
+        titles_box.pack_start(title, False, False, 0)
+        titles_box.pack_start(subtitle, False, False, 0)
 
-        subtitle = Gtk.Label(label="Система и оборудование", xalign=0)
-        add_class(subtitle, "sidebar-subtitle")
-        box.pack_start(subtitle, False, False, 0)
+        head_box.pack_start(head_icon, False, False, 0)
+        head_box.pack_start(titles_box, True, True, 0)
+        box.pack_start(head_box, False, False, 0)
 
         # M3 Search Bar
         self.search_entry = Gtk.SearchEntry()
@@ -744,32 +1052,32 @@ class ControlCenterWindow(Gtk.Window):
 
         # Items ListBox
         self.sidebar_list = Gtk.ListBox()
-        self.sidebar_list.set_selection_mode(Gtk.SelectionMode.SINGLE)
-        self.sidebar_list.connect("row-selected", self.on_sidebar_row_selected)
+        self.sidebar_list.set_selection_mode(Gtk.SelectionMode.NONE)
+        self.sidebar_list.connect("row-activated", self.on_sidebar_row_activated)
 
-        # Strictly clean text titles (No out-of-place emojis)
+        # M3 Strict Navigation Structure (Icon name, Title, Page ID)
         self.sidebar_items = [
-            ("HEADER", "Устройства ввода", None),
-            ("ITEM", "Мышь и тачпад", "mouse"),
-            ("ITEM", "Клавиатура", "keyboard"),
-            ("HEADER", "Оборудование и экран", None),
-            ("ITEM", "Дисплеи", "displays"),
-            ("ITEM", "Игровой режим и Picom", "gaming"),
-            ("HEADER", "Персонализация", None),
-            ("ITEM", "Внешний вид", "appearance"),
-            ("HEADER", "Рабочая среда", None),
-            ("ITEM", "Автозапуск", "autostart"),
-            ("ITEM", "Горячие клавиши", "shortcuts"),
-            ("HEADER", "Система", None),
-            ("ITEM", "О системе", "about"),
+            ("HEADER", "Устройства ввода", None, None),
+            ("ITEM", "Мышь и тачпад", "input-mouse-symbolic", "mouse"),
+            ("ITEM", "Клавиатура", "input-keyboard-symbolic", "keyboard"),
+            ("HEADER", "Оборудование и экран", None, None),
+            ("ITEM", "Дисплеи", "video-display-symbolic", "displays"),
+            ("ITEM", "Игровой режим и Picom", "applications-games-symbolic", "gaming"),
+            ("HEADER", "Персонализация", None, None),
+            ("ITEM", "Внешний вид", "preferences-desktop-appearance-symbolic", "appearance"),
+            ("HEADER", "Рабочая среда", None, None),
+            ("ITEM", "Автозапуск", "system-run-symbolic", "autostart"),
+            ("ITEM", "Горячие клавиши", "preferences-desktop-keyboard-shortcuts-symbolic", "shortcuts"),
+            ("HEADER", "Система", None, None),
+            ("ITEM", "О системе", "help-about-symbolic", "about"),
         ]
 
         self.sidebar_rows: dict[str, Gtk.ListBoxRow] = {}
 
-        for item_type, label, page_name in self.sidebar_items:
+        for item_type, label, icon_name, page_name in self.sidebar_items:
             if item_type == "HEADER":
-                h_label = Gtk.Label(label=label, xalign=0)
-                add_class(h_label, "sidebar-category")
+                h_label = Gtk.Label(label=label.upper(), xalign=0)
+                add_class(h_label, "m3-drawer-category")
                 row = Gtk.ListBoxRow()
                 row.set_selectable(False)
                 row.set_activatable(False)
@@ -777,10 +1085,18 @@ class ControlCenterWindow(Gtk.Window):
                 self.sidebar_list.add(row)
             else:
                 row = Gtk.ListBoxRow()
-                add_class(row, "sidebar-item")
+                add_class(row, "m3-drawer-item")
                 row.page_name = page_name  # type: ignore
+
+                item_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=14)
+                if icon_name:
+                    icon_img = Gtk.Image.new_from_icon_name(icon_name, Gtk.IconSize.MENU)
+                    item_box.pack_start(icon_img, False, False, 0)
+
                 i_label = Gtk.Label(label=label, xalign=0)
-                row.add(i_label)
+                item_box.pack_start(i_label, True, True, 0)
+
+                row.add(item_box)
                 self.sidebar_list.add(row)
                 if page_name:
                     self.sidebar_rows[page_name] = row
@@ -792,8 +1108,8 @@ class ControlCenterWindow(Gtk.Window):
 
         return box
 
-    def on_sidebar_row_selected(self, _listbox: Gtk.ListBox, row: Gtk.ListBoxRow | None) -> None:
-        if row and hasattr(row, "page_name"):
+    def on_sidebar_row_activated(self, _listbox: Gtk.ListBox, row: Gtk.ListBoxRow | None) -> None:
+        if row and hasattr(row, "page_name") and row.page_name:
             self.select_page(row.page_name)
 
     def select_page(self, page_name: str) -> None:
@@ -801,7 +1117,6 @@ class ControlCenterWindow(Gtk.Window):
         for name, r in self.sidebar_rows.items():
             if name == page_name:
                 add_class(r, "active")
-                self.sidebar_list.select_row(r)
             else:
                 remove_class(r, "active")
 
@@ -809,12 +1124,14 @@ class ControlCenterWindow(Gtk.Window):
         text = entry.get_text().lower().strip()
         for page_name, row in self.sidebar_rows.items():
             child = row.get_child()
-            if isinstance(child, Gtk.Label):
-                visible = text in child.get_text().lower() or text in page_name
-                row.set_visible(visible)
+            if isinstance(child, Gtk.Box):
+                label_widget = child.get_children()[-1]
+                if isinstance(label_widget, Gtk.Label):
+                    visible = text in label_widget.get_text().lower() or text in page_name
+                    row.set_visible(visible)
 
     # --------------------------------------------------------------------------
-    # Page 1: Mouse & Touchpad
+    # Page 1: Mouse & Touchpad (Google M3 Specifications)
     # --------------------------------------------------------------------------
     def build_mouse_page(self) -> Gtk.Widget:
         scrolled = Gtk.ScrolledWindow()
@@ -823,7 +1140,7 @@ class ControlCenterWindow(Gtk.Window):
         add_class(root, "content-area")
         scrolled.add(root)
 
-        # Header
+        # Page Header
         header = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
         add_class(header, "page-header")
         title = Gtk.Label(label="Мышь и тачпад", xalign=0)
@@ -834,16 +1151,19 @@ class ControlCenterWindow(Gtk.Window):
         header.pack_start(subtitle, False, False, 0)
         root.pack_start(header, False, False, 0)
 
-        # Card 1: Device Selector
-        dev_card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
-        add_class(dev_card, "card")
-        root.pack_start(dev_card, False, False, 0)
+        # Group 1: Core Parameters (Unified M3 Card)
+        root.pack_start(self.build_section_header("Основные параметры"), False, False, 0)
+        main_card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
+        add_class(main_card, "card")
+        root.pack_start(main_card, False, False, 0)
 
+        # 1.1 Device Selector Row
         dev_title = Gtk.Label(label="Устройство указателя", xalign=0)
         add_class(dev_title, "card-title")
-        dev_card.pack_start(dev_title, False, False, 0)
+        main_card.pack_start(dev_title, False, False, 0)
 
         dev_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
+        dev_row.set_margin_top(8)
         self.device_combo = Gtk.ComboBoxText()
         for dev in self.devices:
             self.device_combo.append_text(f"{dev.name} (id={dev.id})")
@@ -852,63 +1172,48 @@ class ControlCenterWindow(Gtk.Window):
         self.device_combo.connect("changed", self.on_mouse_device_selected)
         dev_row.pack_start(self.device_combo, True, True, 0)
 
-        refresh_btn = Gtk.Button(label="Обновить список устройств")
+        refresh_btn = Gtk.Button(label="Обновить список")
+        add_class(refresh_btn, "btn-tonal")
         refresh_btn.connect("clicked", self.on_refresh_mouse_devices)
         dev_row.pack_end(refresh_btn, False, False, 0)
-        dev_card.pack_start(dev_row, False, False, 0)
+        main_card.pack_start(dev_row, False, False, 0)
 
-        # Card 2: Acceleration Profile (Flat vs Adaptive)
-        accel_card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
-        add_class(accel_card, "card")
-        root.pack_start(accel_card, False, False, 0)
+        main_card.pack_start(self.build_divider(), False, False, 0)
 
+        # 1.2 Acceleration Profile (M3 Segmented Button)
         accel_title = Gtk.Label(label="Профиль ускорения курсора", xalign=0)
         add_class(accel_title, "card-title")
-        accel_sub = Gtk.Label(label="Выбор алгоритма реакции курсора на физическое перемещение мыши", xalign=0)
-        add_class(accel_sub, "card-subtitle")
-        accel_card.pack_start(accel_title, False, False, 0)
-        accel_card.pack_start(accel_sub, False, False, 0)
+        self.accel_sub_desc = Gtk.Label(label="Выбор алгоритма реакции курсора на движение руки", xalign=0)
+        add_class(self.accel_sub_desc, "card-subtitle")
+        main_card.pack_start(accel_title, False, False, 0)
+        main_card.pack_start(self.accel_sub_desc, False, False, 0)
 
-        self.accel_flat_radio = Gtk.RadioButton.new_with_label_from_widget(
-            None,
-            "Плоский профиль (Flat / 1:1) — Рекомендуется для шутеров и точной мышечной памяти"
-        )
-        self.accel_flat_desc = Gtk.Label(
-            label="       Отключает программную акселерацию. Мышь перемещается строго пропорционально физическому сдвигу.",
-            xalign=0
-        )
-        add_class(self.accel_flat_desc, "card-subtitle")
+        seg_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=0)
+        add_class(seg_box, "m3-segmented-box")
 
-        self.accel_adaptive_radio = Gtk.RadioButton.new_with_label_from_widget(
-            self.accel_flat_radio,
-            "Адаптивный профиль (Adaptive) — Стандартное ускорение"
-        )
-        self.accel_adaptive_desc = Gtk.Label(
-            label="       Скорость курсора динамически увеличивается при резких взмахах.",
-            xalign=0
-        )
-        add_class(self.accel_adaptive_desc, "card-subtitle")
+        self.btn_seg_flat = Gtk.Button(label="Без ускорения (Flat 1:1)")
+        add_class(self.btn_seg_flat, "m3-segment-btn")
+        self.btn_seg_flat.connect("clicked", lambda _: self.set_accel_profile("flat"))
 
-        self.accel_flat_radio.connect("toggled", self.on_accel_profile_toggled)
+        self.btn_seg_adaptive = Gtk.Button(label="Адаптивное (Adaptive)")
+        add_class(self.btn_seg_adaptive, "m3-segment-btn")
+        self.btn_seg_adaptive.connect("clicked", lambda _: self.set_accel_profile("adaptive"))
 
-        accel_card.pack_start(self.accel_flat_radio, False, False, 0)
-        accel_card.pack_start(self.accel_flat_desc, False, False, 0)
-        accel_card.pack_start(self.accel_adaptive_radio, False, False, 0)
-        accel_card.pack_start(self.accel_adaptive_desc, False, False, 0)
+        seg_box.pack_start(self.btn_seg_flat, True, True, 0)
+        seg_box.pack_start(self.btn_seg_adaptive, True, True, 0)
+        main_card.pack_start(seg_box, False, False, 0)
 
-        # Card 3: Pointer Speed
-        speed_card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
-        add_class(speed_card, "card")
-        root.pack_start(speed_card, False, False, 0)
+        main_card.pack_start(self.build_divider(), False, False, 0)
 
+        # 1.3 Pointer Speed & Sensitivity
         speed_title = Gtk.Label(label="Скорость указателя", xalign=0)
         add_class(speed_title, "card-title")
-        speed_sub = Gtk.Label(label="Базовая чувствительность сенсора (от -1.0 до +1.0)", xalign=0)
+        speed_sub = Gtk.Label(label="Базовая чувствительность сенсора (от -1.00 до +1.00)", xalign=0)
         add_class(speed_sub, "card-subtitle")
-        speed_card.pack_start(speed_title, False, False, 0)
-        speed_card.pack_start(speed_sub, False, False, 0)
+        main_card.pack_start(speed_title, False, False, 0)
+        main_card.pack_start(speed_sub, False, False, 0)
 
-        speed_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=14)
+        speed_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=16)
         self.speed_scale = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL, -1.0, 1.0, 0.05)
         self.speed_scale.set_value(0.0)
         self.speed_scale.set_digits(2)
@@ -918,58 +1223,57 @@ class ControlCenterWindow(Gtk.Window):
         self.speed_val_label = Gtk.Label(label="0.00")
         add_class(self.speed_val_label, "m3-chip")
 
-        reset_speed_btn = Gtk.Button(label="Сбросить (0.0)")
+        reset_speed_btn = Gtk.Button(label="Сброс")
+        add_class(reset_speed_btn, "btn-tonal")
         reset_speed_btn.connect("clicked", lambda _: self.speed_scale.set_value(0.0))
 
         speed_row.pack_start(self.speed_scale, True, True, 0)
         speed_row.pack_start(self.speed_val_label, False, False, 0)
         speed_row.pack_start(reset_speed_btn, False, False, 0)
-        speed_card.pack_start(speed_row, False, False, 0)
+        main_card.pack_start(speed_row, False, False, 0)
 
-        # Card 4: Scrolling & Buttons
-        buttons_card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
+        # Group 4: Scrolling & Buttons
+        root.pack_start(self.build_section_header("Поведение и прокрутка"), False, False, 0)
+        buttons_card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
         add_class(buttons_card, "card")
         root.pack_start(buttons_card, False, False, 0)
 
-        btn_title = Gtk.Label(label="Прокрутка и кнопки", xalign=0)
-        add_class(btn_title, "card-title")
-        buttons_card.pack_start(btn_title, False, False, 0)
+        # Row 1: Natural Scrolling
+        row_natural = self.build_m3_switch_row(
+            "Естественная прокрутка",
+            "Инвертировать направление прокрутки колесика мыши",
+            self.on_natural_switch_toggled,
+        )
+        self.switch_natural = row_natural.switch
+        buttons_card.pack_start(row_natural.box, False, False, 0)
 
-        row_natural = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
-        add_class(row_natural, "card-row")
-        nat_lbl = Gtk.Label(label="Естественная прокрутка (инверсия направления)", xalign=0)
-        self.switch_natural = Gtk.Switch()
-        self.switch_natural.connect("notify::active", self.on_mouse_setting_changed)
-        row_natural.pack_start(nat_lbl, True, True, 0)
-        row_natural.pack_end(self.switch_natural, False, False, 0)
-        buttons_card.pack_start(row_natural, False, False, 0)
+        # Row 2: Left-handed
+        row_left = self.build_m3_switch_row(
+            "Режим для левши",
+            "Поменять местами левую и правую кнопки мыши",
+            self.on_left_handed_switch_toggled,
+        )
+        self.switch_left = row_left.switch
+        buttons_card.pack_start(row_left.box, False, False, 0)
 
-        row_left = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
-        add_class(row_left, "card-row")
-        left_lbl = Gtk.Label(label="Режим для левши (основная правая кнопка)", xalign=0)
-        self.switch_left = Gtk.Switch()
-        self.switch_left.connect("notify::active", self.on_mouse_setting_changed)
-        row_left.pack_start(left_lbl, True, True, 0)
-        row_left.pack_end(self.switch_left, False, False, 0)
-        buttons_card.pack_start(row_left, False, False, 0)
+        # Row 3: Middle Emulation
+        row_mid = self.build_m3_switch_row(
+            "Эмуляция средней кнопки",
+            "Одновременное нажатие левой и правой кнопок работает как клик колесика",
+            self.on_middle_emu_switch_toggled,
+        )
+        self.switch_middle = row_mid.switch
+        buttons_card.pack_start(row_mid.box, False, False, 0)
 
-        row_mid = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
-        add_class(row_mid, "card-row")
-        mid_lbl = Gtk.Label(label="Эмуляция средней кнопки (нажатие ЛКМ + ПКМ)", xalign=0)
-        self.switch_middle = Gtk.Switch()
-        self.switch_middle.connect("notify::active", self.on_mouse_setting_changed)
-        row_mid.pack_start(mid_lbl, True, True, 0)
-        row_mid.pack_end(self.switch_middle, False, False, 0)
-        buttons_card.pack_start(row_mid, False, False, 0)
-
-        # Card 5: Interactive Test Area (M3 Test Pad)
+        # Group 5: Interactive Test Area
+        root.pack_start(self.build_section_header("Проверка параметров"), False, False, 0)
         test_card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
         add_class(test_card, "card")
         root.pack_start(test_card, False, False, 0)
 
-        test_title = Gtk.Label(label="Проверка мыши (тестовая область)", xalign=0)
+        test_title = Gtk.Label(label="Тестовая область", xalign=0)
         add_class(test_title, "card-title")
-        test_sub = Gtk.Label(label="Интерактивная область для проверки перемещения, кликов и направления прокрутки", xalign=0)
+        test_sub = Gtk.Label(label="Проверьте скорость движения курсора, срабатывание кнопок и прокрутку", xalign=0)
         add_class(test_sub, "card-subtitle")
         test_card.pack_start(test_title, False, False, 0)
         test_card.pack_start(test_sub, False, False, 0)
@@ -1020,6 +1324,42 @@ class ControlCenterWindow(Gtk.Window):
         self.update_mouse_form()
         return scrolled
 
+    def build_section_header(self, text: str) -> Gtk.Label:
+        lbl = Gtk.Label(label=text, xalign=0)
+        add_class(lbl, "section-header-label")
+        return lbl
+
+    def build_divider(self) -> Gtk.Separator:
+        sep = Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL)
+        add_class(sep, "card-divider")
+        return sep
+
+    class SwitchRow:
+        def __init__(self, box: Gtk.Box, switch: Gtk.Switch) -> None:
+            self.box = box
+            self.switch = switch
+
+    def build_m3_switch_row(self, title: str, subtitle: str, callback: Any) -> SwitchRow:
+        row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=16)
+        add_class(row, "card-row")
+
+        text_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
+        lbl_title = Gtk.Label(label=title, xalign=0)
+        add_class(lbl_title, "card-row-title")
+        lbl_sub = Gtk.Label(label=subtitle, xalign=0)
+        add_class(lbl_sub, "card-row-subtitle")
+        lbl_sub.set_line_wrap(True)
+        text_box.pack_start(lbl_title, False, False, 0)
+        text_box.pack_start(lbl_sub, False, False, 0)
+        row.pack_start(text_box, True, True, 0)
+
+        sw = Gtk.Switch()
+        sw.set_valign(Gtk.Align.CENTER)
+        sw.connect("notify::active", callback)
+        row.pack_end(sw, False, False, 0)
+
+        return self.SwitchRow(row, sw)
+
     def on_mouse_device_selected(self, combo: Gtk.ComboBoxText) -> None:
         idx = combo.get_active()
         if idx >= 0 and idx < len(self.devices):
@@ -1041,10 +1381,19 @@ class ControlCenterWindow(Gtk.Window):
             return
         dev = self.devices[self.current_device_idx]
 
+        # M3 Segmented button with active indicator
         if dev.accel_profile == "flat":
-            self.accel_flat_radio.set_active(True)
+            add_class(self.btn_seg_flat, "active")
+            remove_class(self.btn_seg_adaptive, "active")
+            self.btn_seg_flat.set_label("✓ Без ускорения (Flat 1:1)")
+            self.btn_seg_adaptive.set_label("Адаптивное (Adaptive)")
+            self.accel_sub_desc.set_text("Отключает программную акселерацию. Мышь перемещается строго пропорционально физическому сдвигу.")
         else:
-            self.accel_adaptive_radio.set_active(True)
+            add_class(self.btn_seg_adaptive, "active")
+            remove_class(self.btn_seg_flat, "active")
+            self.btn_seg_flat.set_label("Без ускорения (Flat 1:1)")
+            self.btn_seg_adaptive.set_label("✓ Адаптивное (Adaptive)")
+            self.accel_sub_desc.set_text("Курсор динамически ускоряется при резких взмахах рукой. Привычно для офисной работы.")
 
         self.speed_scale.set_value(dev.accel_speed)
         self.speed_val_label.set_text(f"{dev.accel_speed:+.2f}")
@@ -1053,13 +1402,25 @@ class ControlCenterWindow(Gtk.Window):
         self.switch_left.set_active(dev.left_handed)
         self.switch_middle.set_active(dev.middle_emulation)
 
-    def on_accel_profile_toggled(self, radio: Gtk.RadioButton) -> None:
+    def set_accel_profile(self, profile: str) -> None:
         if getattr(self, "loading", False):
             return
         if not self.devices or self.current_device_idx >= len(self.devices):
             return
         dev = self.devices[self.current_device_idx]
-        dev.accel_profile = "flat" if self.accel_flat_radio.get_active() else "adaptive"
+        dev.accel_profile = profile
+        if profile == "flat":
+            add_class(self.btn_seg_flat, "active")
+            remove_class(self.btn_seg_adaptive, "active")
+            self.btn_seg_flat.set_label("✓ Без ускорения (Flat 1:1)")
+            self.btn_seg_adaptive.set_label("Адаптивное (Adaptive)")
+            self.accel_sub_desc.set_text("Отключает программную акселерацию. Мышь перемещается строго пропорционально физическому сдвигу.")
+        else:
+            add_class(self.btn_seg_adaptive, "active")
+            remove_class(self.btn_seg_flat, "active")
+            self.btn_seg_flat.set_label("Без ускорения (Flat 1:1)")
+            self.btn_seg_adaptive.set_label("✓ Адаптивное (Adaptive)")
+            self.accel_sub_desc.set_text("Курсор динамически ускоряется при резких взмахах рукой. Привычно для офисной работы.")
         self.apply_current_mouse()
 
     def on_speed_scale_changed(self, scale: Gtk.Scale) -> None:
@@ -1071,15 +1432,28 @@ class ControlCenterWindow(Gtk.Window):
             self.devices[self.current_device_idx].accel_speed = val
             self.apply_current_mouse()
 
-    def on_mouse_setting_changed(self, switch: Gtk.Switch, _pspec: Any) -> None:
+    def on_natural_switch_toggled(self, switch: Gtk.Switch, _pspec: Any) -> None:
         if getattr(self, "loading", False):
             return
         if not self.devices or self.current_device_idx >= len(self.devices):
             return
-        dev = self.devices[self.current_device_idx]
-        dev.natural_scrolling = self.switch_natural.get_active()
-        dev.left_handed = self.switch_left.get_active()
-        dev.middle_emulation = self.switch_middle.get_active()
+        self.devices[self.current_device_idx].natural_scrolling = switch.get_active()
+        self.apply_current_mouse()
+
+    def on_left_handed_switch_toggled(self, switch: Gtk.Switch, _pspec: Any) -> None:
+        if getattr(self, "loading", False):
+            return
+        if not self.devices or self.current_device_idx >= len(self.devices):
+            return
+        self.devices[self.current_device_idx].left_handed = switch.get_active()
+        self.apply_current_mouse()
+
+    def on_middle_emu_switch_toggled(self, switch: Gtk.Switch, _pspec: Any) -> None:
+        if getattr(self, "loading", False):
+            return
+        if not self.devices or self.current_device_idx >= len(self.devices):
+            return
+        self.devices[self.current_device_idx].middle_emulation = switch.get_active()
         self.apply_current_mouse()
 
     def apply_current_mouse(self) -> None:
@@ -1094,7 +1468,7 @@ class ControlCenterWindow(Gtk.Window):
             self.keyboard_repeat_delay,
             self.keyboard_repeat_rate,
         )
-        self.set_status(f"Настройки для «{dev.name}» применены мгновенно")
+        self.set_status(f"Настройки для «{dev.name}» сохранены и применены")
 
     def on_test_button_press(self, _widget: Gtk.Widget, event: Gdk.EventButton) -> bool:
         self.click_count += 1
@@ -1143,16 +1517,13 @@ class ControlCenterWindow(Gtk.Window):
         header.pack_start(subtitle, False, False, 0)
         root.pack_start(header, False, False, 0)
 
-        # Card 1: Layouts
-        layout_card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
+        # Group 1: Layouts
+        root.pack_start(self.build_section_header("Раскладки ввода"), False, False, 0)
+        layout_card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
         add_class(layout_card, "card")
         root.pack_start(layout_card, False, False, 0)
 
-        l_title = Gtk.Label(label="Раскладки и переключение", xalign=0)
-        add_class(l_title, "card-title")
-        layout_card.pack_start(l_title, False, False, 0)
-
-        l_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
+        l_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=14)
         l_lbl = Gtk.Label(label="Активные раскладки:", xalign=0)
         self.entry_layouts = Gtk.Entry()
         self.entry_layouts.set_text(self.keyboard_layouts)
@@ -1169,11 +1540,12 @@ class ControlCenterWindow(Gtk.Window):
 
         for p_name, p_val in [("US, RU", "us,ru"), ("US, UA", "us,ua"), ("US, KZ", "us,kz"), ("US Only", "us")]:
             btn = Gtk.Button(label=p_name)
+            add_class(btn, "btn-tonal")
             btn.connect("clicked", lambda _, val=p_val: set_preset(val))
             presets_box.pack_start(btn, False, False, 0)
         layout_card.pack_start(presets_box, False, False, 0)
 
-        switch_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
+        switch_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=14)
         sw_lbl = Gtk.Label(label="Клавиша смены языка:", xalign=0)
         self.switch_combo = Gtk.ComboBoxText()
         self.switch_options = [
@@ -1192,19 +1564,13 @@ class ControlCenterWindow(Gtk.Window):
         switch_box.pack_start(self.switch_combo, True, True, 0)
         layout_card.pack_start(switch_box, False, False, 0)
 
-        # Card 2: Repeat & Latency
-        repeat_card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
+        # Group 2: Repeat & Latency
+        root.pack_start(self.build_section_header("Скорость автоповтора (xset rate)"), False, False, 0)
+        repeat_card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
         add_class(repeat_card, "card")
         root.pack_start(repeat_card, False, False, 0)
 
-        r_title = Gtk.Label(label="Отклик и частота повтора", xalign=0)
-        add_class(r_title, "card-title")
-        r_sub = Gtk.Label(label="Оптимизация задержки нажатия клавиш (xset rate)", xalign=0)
-        add_class(r_sub, "card-subtitle")
-        repeat_card.pack_start(r_title, False, False, 0)
-        repeat_card.pack_start(r_sub, False, False, 0)
-
-        delay_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
+        delay_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=14)
         delay_lbl = Gtk.Label(label="Задержка перед повтором:", xalign=0)
         delay_lbl.set_size_request(220, -1)
         self.delay_scale = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL, 150, 600, 10)
@@ -1219,7 +1585,7 @@ class ControlCenterWindow(Gtk.Window):
         delay_box.pack_start(self.delay_val_lbl, False, False, 0)
         repeat_card.pack_start(delay_box, False, False, 0)
 
-        rate_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
+        rate_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=14)
         rate_lbl = Gtk.Label(label="Частота повтора:", xalign=0)
         rate_lbl.set_size_request(220, -1)
         self.rate_scale = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL, 15, 60, 5)
@@ -1236,15 +1602,16 @@ class ControlCenterWindow(Gtk.Window):
 
         preset_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
         opt_btn = Gtk.Button(label="Игровой пресет (280 мс / 40 симв/с)")
+        add_class(opt_btn, "btn-tonal")
         opt_btn.connect("clicked", lambda _: (self.delay_scale.set_value(280), self.rate_scale.set_value(40)))
         preset_row.pack_start(opt_btn, False, False, 0)
         repeat_card.pack_start(preset_row, False, False, 0)
 
         test_entry_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
         test_entry_lbl = Gtk.Label(label="Поле для проверки скорости повтора клавиш:", xalign=0)
-        add_class(test_entry_lbl, "card-subtitle")
+        add_class(test_entry_lbl, "card-row-subtitle")
         test_entry = Gtk.Entry()
-        test_entry.set_placeholder_text("Зажмите любую клавишу здесь для проверки отклика...")
+        test_entry.set_placeholder_text("Зажмите любую клавишу здесь для проверки...")
         test_entry_box.pack_start(test_entry_lbl, False, False, 0)
         test_entry_box.pack_start(test_entry, False, False, 0)
         repeat_card.pack_start(test_entry_box, False, False, 0)
@@ -1294,6 +1661,7 @@ class ControlCenterWindow(Gtk.Window):
         header.pack_start(subtitle, False, False, 0)
         root.pack_start(header, False, False, 0)
 
+        root.pack_start(self.build_section_header("Подключенные мониторы"), False, False, 0)
         displays = get_connected_displays()
         for disp in displays:
             card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
@@ -1315,25 +1683,24 @@ class ControlCenterWindow(Gtk.Window):
             card.pack_start(top_row, False, False, 0)
 
             geom_lbl = Gtk.Label(label=f"Разрешение и геометрия: {disp['geom']}", xalign=0)
-            add_class(geom_lbl, "card-subtitle")
+            add_class(geom_lbl, "card-row-subtitle")
             card.pack_start(geom_lbl, False, False, 0)
 
             root.pack_start(card, False, False, 0)
 
+        root.pack_start(self.build_section_header("Управление экранами"), False, False, 0)
         actions_card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
         add_class(actions_card, "card")
         root.pack_start(actions_card, False, False, 0)
 
-        a_title = Gtk.Label(label="Управление экранами", xalign=0)
-        add_class(a_title, "card-title")
-        actions_card.pack_start(a_title, False, False, 0)
-
-        btns_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
+        btns_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
         arandr_btn = Gtk.Button(label="Открыть редактор ARandR")
+        add_class(arandr_btn, "btn-tonal")
         arandr_btn.connect("clicked", lambda _: subprocess.Popen(["arandr"]))
         btns_box.pack_start(arandr_btn, False, False, 0)
 
         monitor_sh_btn = Gtk.Button(label="Применить конфигурацию monitor.sh")
+        add_class(monitor_sh_btn, "btn-primary")
         monitor_sh_btn.connect("clicked", self.on_run_monitor_sh)
         btns_box.pack_start(monitor_sh_btn, False, False, 0)
 
@@ -1367,7 +1734,7 @@ class ControlCenterWindow(Gtk.Window):
         header.pack_start(subtitle, False, False, 0)
         root.pack_start(header, False, False, 0)
 
-        # Card 1: Picom
+        root.pack_start(self.build_section_header("Композитор окон"), False, False, 0)
         p_card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
         add_class(p_card, "card")
         root.pack_start(p_card, False, False, 0)
@@ -1375,7 +1742,7 @@ class ControlCenterWindow(Gtk.Window):
         picom_running = run_command(["pgrep", "-x", "picom"]).returncode == 0
         self.picom_active = picom_running
 
-        p_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
+        p_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=14)
         p_title = Gtk.Label(label="Композитор Picom (эффекты и прозрачность):", xalign=0)
         add_class(p_title, "card-title")
         self.picom_badge = Gtk.Label(label="Включен" if picom_running else "Отключен (игровой режим)")
@@ -1396,17 +1763,13 @@ class ControlCenterWindow(Gtk.Window):
                   "Быстрое переключение доступно по комбинации: Mod + P.",
             xalign=0
         )
-        add_class(p_desc, "card-subtitle")
+        add_class(p_desc, "card-row-subtitle")
         p_card.pack_start(p_desc, False, False, 0)
 
-        # Card 2: Low-Latency Tweaks
+        root.pack_start(self.build_section_header("Параметры низкой задержки"), False, False, 0)
         t_card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
         add_class(t_card, "card")
         root.pack_start(t_card, False, False, 0)
-
-        t_title = Gtk.Label(label="Активные параметры низкой задержки", xalign=0)
-        add_class(t_title, "card-title")
-        t_card.pack_start(t_title, False, False, 0)
 
         items = [
             ("Flat Mouse Acceleration (Raw 1:1)", "Включено", "Аппаратная акселерация мыши полностью отключена"),
@@ -1414,13 +1777,13 @@ class ControlCenterWindow(Gtk.Window):
             ("Быстрый автоповтор клавиатуры (280 мс)", "Включено", "Мгновенное срабатывание при зажатии клавиш"),
         ]
         for name, status, desc in items:
-            row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
+            row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
             add_class(row, "card-row")
             lbl_name = Gtk.Label(label=name, xalign=0)
             lbl_badge = Gtk.Label(label=status)
             add_class(lbl_badge, "m3-chip-success")
             lbl_desc = Gtk.Label(label=f"— {desc}", xalign=0)
-            add_class(lbl_desc, "card-subtitle")
+            add_class(lbl_desc, "card-row-subtitle")
 
             row.pack_start(lbl_name, False, False, 0)
             row.pack_start(lbl_badge, False, False, 0)
@@ -1463,17 +1826,57 @@ class ControlCenterWindow(Gtk.Window):
         header.pack_start(subtitle, False, False, 0)
         root.pack_start(header, False, False, 0)
 
-        # Card 1: Themes
-        theme_card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
+        # Group 1: Material You Dynamic Theming
+        root.pack_start(self.build_section_header("Цвета Material You"), False, False, 0)
+        m3_card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=14)
+        add_class(m3_card, "card")
+        root.pack_start(m3_card, False, False, 0)
+
+        m3_head_row = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
+        m3_title = Gtk.Label(label="Динамическая цветовая схема", xalign=0)
+        add_class(m3_title, "card-title")
+        m3_desc = Gtk.Label(
+            label="Цветовые роли Material Design 3 и системная тема GTK автоматически адаптируются к текущим обоям и палитре Pywal.",
+            xalign=0,
+        )
+        add_class(m3_desc, "card-row-subtitle")
+        m3_head_row.pack_start(m3_title, False, False, 0)
+        m3_head_row.pack_start(m3_desc, False, False, 0)
+        m3_card.pack_start(m3_head_row, False, False, 0)
+
+        pal = CURRENT_PALETTE or get_m3_dynamic_palette()
+        wall_name = Path(pal.get("wallpaper", "")).name or "Обои рабочего стола"
+
+        badges_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
+        self.m3_wall_badge = Gtk.Label(label=wall_name)
+        add_class(self.m3_wall_badge, "m3-chip")
+
+        self.m3_primary_badge = Gtk.Label(label=f"Акцент: {pal['primary']}")
+        add_class(self.m3_primary_badge, "m3-chip")
+
+        self.m3_surface_badge = Gtk.Label(label=f"Фон: {pal['surface']}")
+        add_class(self.m3_surface_badge, "m3-chip")
+
+        badges_row.pack_start(self.m3_wall_badge, False, False, 0)
+        badges_row.pack_start(self.m3_primary_badge, False, False, 0)
+        badges_row.pack_start(self.m3_surface_badge, False, False, 0)
+        m3_card.pack_start(badges_row, False, False, 0)
+
+        m3_btn_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
+        sync_m3_btn = Gtk.Button(label="Синхронизировать цвета Material You")
+        add_class(sync_m3_btn, "btn-primary")
+        sync_m3_btn.connect("clicked", self.on_sync_material_you_clicked)
+        m3_btn_row.pack_start(sync_m3_btn, False, False, 0)
+        m3_card.pack_start(m3_btn_row, False, False, 0)
+
+        # Group 2: Themes
+        root.pack_start(self.build_section_header("Темы оформления"), False, False, 0)
+        theme_card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
         add_class(theme_card, "card")
         root.pack_start(theme_card, False, False, 0)
 
-        t_title = Gtk.Label(label="Темы оформления", xalign=0)
-        add_class(t_title, "card-title")
-        theme_card.pack_start(t_title, False, False, 0)
-
         cur_theme = get_current_theme()
-        cur_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
+        cur_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=14)
         cur_lbl = Gtk.Label(label="Текущая тема:", xalign=0)
         self.cur_theme_badge = Gtk.Label(label=cur_theme)
         add_class(self.cur_theme_badge, "m3-chip")
@@ -1481,7 +1884,7 @@ class ControlCenterWindow(Gtk.Window):
         cur_row.pack_start(self.cur_theme_badge, False, False, 0)
         theme_card.pack_start(cur_row, False, False, 0)
 
-        themes_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
+        themes_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
         self.themes_combo = Gtk.ComboBoxText()
         all_themes = list_themes()
         active_t_idx = 0
@@ -1494,24 +1897,23 @@ class ControlCenterWindow(Gtk.Window):
         themes_row.pack_start(self.themes_combo, True, True, 0)
 
         apply_t_btn = Gtk.Button(label="Применить тему")
+        add_class(apply_t_btn, "btn-primary")
         apply_t_btn.connect("clicked", self.on_apply_theme_clicked)
         themes_row.pack_start(apply_t_btn, False, False, 0)
 
         open_selector_btn = Gtk.Button(label="Галерея тем (Mod+T)")
+        add_class(open_selector_btn, "btn-tonal")
         open_selector_btn.connect("clicked", lambda _: subprocess.Popen([str(HOME / ".config/i3/scripts/software/theme-select.sh")]))
         themes_row.pack_end(open_selector_btn, False, False, 0)
         theme_card.pack_start(themes_row, False, False, 0)
 
-        # Card 2: Mouse Cursor
-        cursor_card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
+        # Group 3: Mouse Cursor
+        root.pack_start(self.build_section_header("Курсор мыши"), False, False, 0)
+        cursor_card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
         add_class(cursor_card, "card")
         root.pack_start(cursor_card, False, False, 0)
 
-        c_title = Gtk.Label(label="Курсор мыши", xalign=0)
-        add_class(c_title, "card-title")
-        cursor_card.pack_start(c_title, False, False, 0)
-
-        c_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
+        c_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=14)
         c_lbl = Gtk.Label(label="Тема курсора:", xalign=0)
         self.cursor_entry = Gtk.Entry()
         self.cursor_entry.set_text("clay-dark-cursors")
@@ -1529,10 +1931,17 @@ class ControlCenterWindow(Gtk.Window):
         cursor_card.pack_start(c_row, False, False, 0)
 
         save_cursor_btn = Gtk.Button(label="Сохранить настройки курсора в ~/.Xresources")
+        add_class(save_cursor_btn, "btn-tonal")
         save_cursor_btn.connect("clicked", self.on_save_cursor_clicked)
         cursor_card.pack_start(save_cursor_btn, False, False, 0)
 
         return scrolled
+
+    def on_sync_material_you_clicked(self, _btn: Gtk.Button) -> None:
+        update_gtk_script = HOME / ".config" / "i3" / "scripts" / "software" / "update-gtk-theme.py"
+        if update_gtk_script.exists():
+            subprocess.run(["python3", str(update_gtk_script)], check=False)
+        self.reload_material_you_palette(notify=True)
 
     def on_apply_theme_clicked(self, _btn: Gtk.Button) -> None:
         th = self.themes_combo.get_active_text()
@@ -1543,6 +1952,7 @@ class ControlCenterWindow(Gtk.Window):
                 subprocess.Popen([str(script), str(theme_path)])
                 self.cur_theme_badge.set_text(th)
                 self.set_status(f"Тема «{th}» применяется...")
+                GLib.timeout_add(1200, lambda: (self.reload_material_you_palette(notify=True), False)[1])
 
     def on_save_cursor_clicked(self, _btn: Gtk.Button) -> None:
         th = self.cursor_entry.get_text().strip() or "clay-dark-cursors"
@@ -1586,13 +1996,10 @@ class ControlCenterWindow(Gtk.Window):
         header.pack_start(subtitle, False, False, 0)
         root.pack_start(header, False, False, 0)
 
-        card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
+        root.pack_start(self.build_section_header("Службы сессии i3wm"), False, False, 0)
+        card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
         add_class(card, "card")
         root.pack_start(card, False, False, 0)
-
-        c_title = Gtk.Label(label="Службы сессии i3wm (~/.config/i3/config)", xalign=0)
-        add_class(c_title, "card-title")
-        card.pack_start(c_title, False, False, 0)
 
         autostart_items = [
             ("monitor.sh", "Автоматическая настройка мониторов и частоты обновления"),
@@ -1609,19 +2016,24 @@ class ControlCenterWindow(Gtk.Window):
         ]
 
         for name, desc in autostart_items:
-            row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
+            row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=14)
             add_class(row, "card-row")
-            lbl_name = Gtk.Label(label=f"<b>{name}</b>", xalign=0)
-            lbl_name.set_use_markup(True)
+
+            text_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
+            lbl_name = Gtk.Label(label=name, xalign=0)
+            add_class(lbl_name, "card-row-title")
             lbl_desc = Gtk.Label(label=desc, xalign=0)
-            add_class(lbl_desc, "card-subtitle")
+            add_class(lbl_desc, "card-row-subtitle")
+            lbl_desc.set_line_wrap(True)
+            text_box.pack_start(lbl_name, False, False, 0)
+            text_box.pack_start(lbl_desc, False, False, 0)
 
             sw = Gtk.Switch()
+            sw.set_valign(Gtk.Align.CENTER)
             sw.set_active(True)
             sw.set_sensitive(False)
 
-            row.pack_start(lbl_name, False, False, 0)
-            row.pack_start(lbl_desc, True, True, 0)
+            row.pack_start(text_box, True, True, 0)
             row.pack_end(sw, False, False, 0)
             card.pack_start(row, False, False, 0)
 
@@ -1647,7 +2059,8 @@ class ControlCenterWindow(Gtk.Window):
         header.pack_start(subtitle, False, False, 0)
         root.pack_start(header, False, False, 0)
 
-        card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
+        root.pack_start(self.build_section_header("Комбинации клавиш i3wm"), False, False, 0)
+        card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
         add_class(card, "card")
         root.pack_start(card, False, False, 0)
 
@@ -1669,13 +2082,15 @@ class ControlCenterWindow(Gtk.Window):
         ]
 
         for keys, action in shortcuts:
-            row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=14)
+            row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=16)
             add_class(row, "card-row")
             lbl_key = Gtk.Label(label=keys, xalign=0)
             add_class(lbl_key, "m3-chip")
             lbl_key.set_size_request(160, -1)
 
             lbl_act = Gtk.Label(label=action, xalign=0)
+            add_class(lbl_act, "card-row-title")
+            lbl_act.set_line_wrap(True)
 
             row.pack_start(lbl_key, False, False, 0)
             row.pack_start(lbl_act, True, True, 0)
@@ -1703,7 +2118,8 @@ class ControlCenterWindow(Gtk.Window):
         header.pack_start(subtitle, False, False, 0)
         root.pack_start(header, False, False, 0)
 
-        card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
+        root.pack_start(self.build_section_header("Характеристики оборудования"), False, False, 0)
+        card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
         add_class(card, "card")
         root.pack_start(card, False, False, 0)
 
@@ -1722,18 +2138,22 @@ class ControlCenterWindow(Gtk.Window):
         for title_str, val_str in spec_items:
             row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=16)
             add_class(row, "card-row")
-            lbl_t = Gtk.Label(label=f"<b>{title_str}</b>", xalign=0)
-            lbl_t.set_use_markup(True)
+
+            lbl_t = Gtk.Label(label=title_str, xalign=0)
+            add_class(lbl_t, "card-row-title")
             lbl_t.set_size_request(220, -1)
 
             lbl_v = Gtk.Label(label=val_str, xalign=0)
+            add_class(lbl_v, "card-row-subtitle")
+            lbl_v.set_line_wrap(True)
             lbl_v.set_selectable(True)
 
             row.pack_start(lbl_t, False, False, 0)
             row.pack_start(lbl_v, True, True, 0)
             card.pack_start(row, False, False, 0)
 
-        rice_card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
+        root.pack_start(self.build_section_header("Конфигурация окружения"), False, False, 0)
+        rice_card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
         add_class(rice_card, "card")
         root.pack_start(rice_card, False, False, 0)
 
@@ -1744,7 +2164,7 @@ class ControlCenterWindow(Gtk.Window):
                   "Интерфейс спроектирован по спецификации Material Design 3 (Google M3).",
             xalign=0
         )
-        add_class(r_sub, "card-subtitle")
+        add_class(r_sub, "card-row-subtitle")
         rice_card.pack_start(r_title, False, False, 0)
         rice_card.pack_start(r_sub, False, False, 0)
 
@@ -1760,7 +2180,7 @@ class ControlCenterWindow(Gtk.Window):
         bar.pack_start(self.status_lbl, True, True, 0)
 
         hint_lbl = Gtk.Label(label="Быстрый запуск: Mod+,")
-        add_class(hint_lbl, "card-subtitle")
+        add_class(hint_lbl, "card-row-subtitle")
         bar.pack_end(hint_lbl, False, False, 0)
 
         return bar
