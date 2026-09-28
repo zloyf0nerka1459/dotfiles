@@ -50,6 +50,7 @@ PACMAN_PACKAGES=(
     xorg-xinit
     xorg-xrandr
     xorg-xprop
+    xorg-xinput
     feh
     kitty
     rofi
@@ -100,7 +101,7 @@ done
 
 # 3. Backup existing configs
 title "Резервное копирование существующих конфигураций"
-STOW_PACKAGES=(i3 eww picom kitty rofi dunst themes wal starship gtk bin)
+STOW_PACKAGES=(i3 eww picom kitty rofi dunst themes wal starship gtk bin xorg)
 mkdir -p "$BACKUP_DIR"
 
 backup_if_needed() {
@@ -122,6 +123,7 @@ backup_if_needed "$HOME/.config/wal"
 backup_if_needed "$HOME/.config/starship.toml"
 backup_if_needed "$HOME/.config/gtk-3.0"
 backup_if_needed "$HOME/.config/xsettingsd"
+backup_if_needed "$HOME/.Xresources"
 
 # 4. Deploy via GNU Stow
 title "Связывание конфигураций через GNU Stow"
@@ -140,7 +142,14 @@ chmod +x "$HOME/.config/eww/launch.sh" 2>/dev/null || true
 chmod +x "$HOME/.config/eww/scripts/"* 2>/dev/null || true
 chmod +x "$HOME/.local/bin/"* 2>/dev/null || true
 
-# 5. Initialize theme
+# 5. Xorg System Tweaks
+title "Применение системных настроек Xorg"
+if [ -d "/etc/X11/xorg.conf.d" ]; then
+    log "Установка Xorg твиков (Flat mouse acceleration, предотвращение гашения экрана)..."
+    sudo cp -n "$DOTFILES_DIR/system/xorg/"*.conf /etc/X11/xorg.conf.d/ 2>/dev/null || warn "Не удалось скопировать конфиги в /etc/X11/xorg.conf.d. Конфиги сохранены в dotfiles/system/xorg/."
+fi
+
+# 6. Initialize theme
 title "Инициализация дефолтной темы оформления"
 DEFAULT_THEME="$HOME/.config/themes/ghibli-serenity"
 if [ -d "$DEFAULT_THEME" ]; then

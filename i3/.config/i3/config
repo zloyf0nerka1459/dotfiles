@@ -4,8 +4,9 @@ set $term kitty
 set $browser zen-browser
 set $editor code
 
-# Подгружаем цвета Pywal
-exec_always --no-startup-id xrdb ~/.cache/wal/colors.Xresources
+# Подгружаем Xresources и цвета Pywal
+exec_always --no-startup-id [ -f ~/.Xresources ] && xrdb -merge ~/.Xresources
+exec_always --no-startup-id [ -f ~/.cache/wal/colors.Xresources ] && xrdb -merge ~/.cache/wal/colors.Xresources
 
 # Дефолтные цвета (на случай, если wal не сработал)
 set_from_resource $bg i3wm.color0 #000000
@@ -130,8 +131,8 @@ for_window [class="gameoverlayui"] floating enable, border none
 # Добавляем небольшую паузу (sleep 1), чтобы X-сервер успел "прийти в себя"
 exec_always --no-startup-id ~/.config/i3/scripts/hardware/monitor.sh
 
-# 2. Управляем раскладками и X11-input
-exec_always --no-startup-id ~/.config/system-control-center/apply-input-settings.sh
+# 2. Управляем раскладками и оптимизациями X11-input (скорость клавиатуры, плоский профиль мыши, DPMS)
+exec_always --no-startup-id ~/.config/i3/scripts/hardware/input.sh
 
 # 3. Системные службы (стартуют ОДИН раз при запуске сессии)
 exec --no-startup-id ~/.config/i3/scripts/software/polkit-agent.sh

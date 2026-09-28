@@ -1,0 +1,18 @@
+! ==============================================================================
+! X11 Resources Configuration (~/.Xresources)
+! ==============================================================================
+
+! === Xft Font Rendering Tweaks ===
+! Четкий, чистый и плавный субпиксельный рендеринг шрифтов
+Xft.autohint:   0
+Xft.antialias:  1
+Xft.hinting:    1
+Xft.hintstyle:  hintslight
+Xft.rgba:       rgb
+Xft.lcdfilter:  lcddefault
+Xft.dpi:        96
+
+! === Xcursor Settings ===
+Xcursor.theme:      clay-dark-cursors
+Xcursor.size:       24
+Xcursor.theme_core: true
