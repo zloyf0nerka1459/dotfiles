@@ -95,6 +95,12 @@ fi
 if [ -f "$HOME/.cache/wal/colors.Xresources" ]; then
     xrdb -merge "$HOME/.cache/wal/colors.Xresources"
 fi
+if [ -f "$HOME/.Xresources" ]; then
+    xrdb -merge "$HOME/.Xresources"
+fi
+if command -v xsetroot >/dev/null 2>&1; then
+    xsetroot -cursor_name left_ptr 2>/dev/null || true
+fi
 
 # 4. Seamlessly reload i3 (updates border and accent colors without screen flicker)
 if command -v i3-msg >/dev/null 2>&1; then

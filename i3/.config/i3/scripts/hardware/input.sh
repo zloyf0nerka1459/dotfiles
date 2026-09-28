@@ -39,3 +39,8 @@ if command -v xinput >/dev/null 2>&1; then
         fi
     done < <(xinput list --id-only 2>/dev/null || true)
 fi
+
+# 4. Системный курсор мыши (X11 root window)
+if command -v xsetroot >/dev/null 2>&1; then
+    xsetroot -cursor_name left_ptr 2>/dev/null || true
+fi

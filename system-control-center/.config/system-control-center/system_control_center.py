@@ -939,6 +939,282 @@ def get_current_theme() -> str:
     return "ghibli-serenity"
 
 # ==============================================================================
+# Unified Systemwide Cursor Management Backend
+# ==============================================================================
+
+def get_installed_cursor_themes() -> list[dict[str, str]]:
+    """Scan system and user icon directories for installed X11/Wayland cursor themes."""
+    search_dirs = [
+        Path("/usr/share/icons"),
+        HOME / ".local" / "share" / "icons",
+        HOME / ".icons",
+    ]
+    seen = set()
+    themes: list[dict[str, str]] = []
+    
+    priority_order = {
+        "Bibata-Modern-Classic": 10,
+        "Bibata-Modern-Ice": 20,
+        "Bibata-Modern-Amber": 30,
+        "Bibata-Original-Classic": 40,
+        "Nordzy-cursors": 50,
+        "capitaine-cursors": 60,
+        "Vimix-cursors": 70,
+        "breeze_cursors": 80,
+    }
+
+    for sdir in search_dirs:
+        if not sdir.exists():
+            continue
+        try:
+            for p in sorted(sdir.iterdir()):
+                if not p.is_dir() or p.name in seen or p.name == "default":
+                    continue
+                cursors_dir = p / "cursors"
+                if cursors_dir.is_dir():
+                    seen.add(p.name)
+                    title = p.name
+                    comment = ""
+                    index_file = p / "index.theme"
+                    if index_file.exists():
+                        try:
+                            for line in index_file.read_text(encoding="utf-8", errors="ignore").splitlines():
+                                if line.startswith("Name=") and title == p.name:
+                                    title = line.split("=", 1)[1].strip()
+                                elif line.startswith("Comment=") and not comment:
+                                    comment = line.split("=", 1)[1].strip()
+                        except Exception:
+                            pass
+                    themes.append({
+                        "id": p.name,
+                        "name": title,
+                        "comment": comment,
+                        "path": str(p),
+                    })
+        except Exception:
+            pass
+
+    return sorted(themes, key=lambda x: (priority_order.get(x["id"], 100), x["name"].lower()))
+
+def get_current_cursor_settings() -> tuple[str, int]:
+    """Detect current system cursor theme and size."""
+    theme = "Bibata-Modern-Classic"
+    size = 24
+
+    # 1. Check GSettings
+    try:
+        res = subprocess.run(["gsettings", "get", "org.gnome.desktop.interface", "cursor-theme"],
+                             stdout=subprocess.PIPE, text=True, check=False)
+        if res.returncode == 0:
+            val = res.stdout.strip().strip("'\"")
+            if val and val != "default":
+                theme = val
+    except Exception:
+        pass
+
+    try:
+        res_sz = subprocess.run(["gsettings", "get", "org.gnome.desktop.interface", "cursor-size"],
+                                stdout=subprocess.PIPE, text=True, check=False)
+        if res_sz.returncode == 0:
+            val_sz = int(res_sz.stdout.strip())
+            if val_sz in (16, 24, 32, 48):
+                size = val_sz
+    except Exception:
+        pass
+
+    # 2. Check Xresources fallback
+    if theme == "Bibata-Modern-Classic" and XRESOURCES_PATH.exists():
+        try:
+            for line in XRESOURCES_PATH.read_text(encoding="utf-8", errors="ignore").splitlines():
+                if line.strip().startswith("Xcursor.theme:"):
+                    val = line.split(":", 1)[1].strip()
+                    if val:
+                        theme = val
+                elif line.strip().startswith("Xcursor.size:"):
+                    try:
+                        sz = int(line.split(":", 1)[1].strip())
+                        if sz in (16, 24, 32, 48):
+                            size = sz
+                    except Exception:
+                        pass
+        except Exception:
+            pass
+
+    return theme, size
+
+def apply_cursor_theme_systemwide(theme_id: str, size: int) -> tuple[bool, str]:
+    """
+    Atomically apply and synchronize cursor theme and size across all system components:
+    X11 root, ~/.icons/default, ~/.local/share/icons/default, Xresources, GTK 2/3/4,
+    GSettings, xsettingsd, environment variables, and systemd/dbus activation environments.
+    """
+    try:
+        # 1. ~/.icons/default/index.theme
+        p_icons = HOME / ".icons" / "default"
+        p_icons.mkdir(parents=True, exist_ok=True)
+        (p_icons / "index.theme").write_text(
+            f"[Icon Theme]\nName=Default\nComment=Default Cursor Theme\nInherits={theme_id}\n",
+            encoding="utf-8"
+        )
+
+        # 2. ~/.local/share/icons/default/index.theme
+        p_local = HOME / ".local" / "share" / "icons" / "default"
+        p_local.mkdir(parents=True, exist_ok=True)
+        (p_local / "index.theme").write_text(
+            f"[Icon Theme]\nName=Default\nComment=Default Cursor Theme\nInherits={theme_id}\n",
+            encoding="utf-8"
+        )
+
+        # 3. ~/.Xresources
+        if XRESOURCES_PATH.exists():
+            lines = XRESOURCES_PATH.read_text(encoding="utf-8", errors="ignore").splitlines()
+        else:
+            lines = [
+                "! === Xft Font Rendering Tweaks ===",
+                "Xft.autohint:   0",
+                "Xft.antialias:  1",
+                "Xft.hinting:    1",
+                "Xft.hintstyle:  hintslight",
+                "Xft.rgba:       rgb",
+                "Xft.lcdfilter:  lcddefault",
+                "Xft.dpi:        96",
+            ]
+        new_lines = []
+        found_theme = False
+        found_size = False
+        found_core = False
+        for line in lines:
+            sline = line.strip()
+            if sline.startswith("Xcursor.theme:"):
+                new_lines.append(f"Xcursor.theme:      {theme_id}")
+                found_theme = True
+            elif sline.startswith("Xcursor.size:"):
+                new_lines.append(f"Xcursor.size:       {size}")
+                found_size = True
+            elif sline.startswith("Xcursor.theme_core:"):
+                new_lines.append("Xcursor.theme_core: true")
+                found_core = True
+            else:
+                new_lines.append(line)
+        if not found_theme:
+            new_lines.append(f"Xcursor.theme:      {theme_id}")
+        if not found_size:
+            new_lines.append(f"Xcursor.size:       {size}")
+        if not found_core:
+            new_lines.append("Xcursor.theme_core: true")
+        XRESOURCES_PATH.write_text("\n".join(new_lines) + "\n", encoding="utf-8")
+
+        # 4. ~/.config/gtk-3.0/settings.ini and ~/.config/gtk-4.0/settings.ini
+        def update_gtk_ini(path: Path) -> None:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            ini_lines = []
+            if path.exists():
+                ini_lines = path.read_text(encoding="utf-8", errors="ignore").splitlines()
+            out_lines = []
+            has_theme = False
+            has_size = False
+            in_settings = False
+            for l in ini_lines:
+                sl = l.strip()
+                if sl == "[Settings]":
+                    in_settings = True
+                    out_lines.append(l)
+                    continue
+                if sl.startswith("gtk-cursor-theme-name"):
+                    out_lines.append(f"gtk-cursor-theme-name={theme_id}")
+                    has_theme = True
+                elif sl.startswith("gtk-cursor-theme-size"):
+                    out_lines.append(f"gtk-cursor-theme-size={size}")
+                    has_size = True
+                else:
+                    out_lines.append(l)
+            if not in_settings:
+                out_lines.insert(0, "[Settings]")
+            if not has_theme:
+                out_lines.append(f"gtk-cursor-theme-name={theme_id}")
+            if not has_size:
+                out_lines.append(f"gtk-cursor-theme-size={size}")
+            path.write_text("\n".join(out_lines) + "\n", encoding="utf-8")
+
+        update_gtk_ini(CONFIG_HOME / "gtk-3.0" / "settings.ini")
+        update_gtk_ini(CONFIG_HOME / "gtk-4.0" / "settings.ini")
+
+        # 5. ~/.gtkrc-2.0
+        gtk2_path = HOME / ".gtkrc-2.0"
+        gtk2_lines = []
+        if gtk2_path.exists():
+            gtk2_lines = gtk2_path.read_text(encoding="utf-8", errors="ignore").splitlines()
+        out_gtk2 = []
+        has_t2 = False
+        has_s2 = False
+        for l in gtk2_lines:
+            if "gtk-cursor-theme-name" in l:
+                out_gtk2.append(f'gtk-cursor-theme-name="{theme_id}"')
+                has_t2 = True
+            elif "gtk-cursor-theme-size" in l:
+                out_gtk2.append(f"gtk-cursor-theme-size={size}")
+                has_s2 = True
+            else:
+                out_gtk2.append(l)
+        if not has_t2:
+            out_gtk2.append(f'gtk-cursor-theme-name="{theme_id}"')
+        if not has_s2:
+            out_gtk2.append(f"gtk-cursor-theme-size={size}")
+        gtk2_path.write_text("\n".join(out_gtk2) + "\n", encoding="utf-8")
+
+        # 6. ~/.config/xsettingsd/xsettingsd.conf
+        xset_path = CONFIG_HOME / "xsettingsd" / "xsettingsd.conf"
+        if xset_path.exists():
+            xlines = xset_path.read_text(encoding="utf-8", errors="ignore").splitlines()
+            out_x = []
+            has_ct = False
+            has_cs = False
+            for l in xlines:
+                sl = l.strip()
+                if sl.startswith("Gtk/CursorThemeName"):
+                    out_x.append(f'Gtk/CursorThemeName "{theme_id}"')
+                    has_ct = True
+                elif sl.startswith("Gtk/CursorThemeSize"):
+                    out_x.append(f"Gtk/CursorThemeSize {size}")
+                    has_cs = True
+                else:
+                    out_x.append(l)
+            if not has_ct:
+                out_x.append(f'Gtk/CursorThemeName "{theme_id}"')
+            if not has_cs:
+                out_x.append(f"Gtk/CursorThemeSize {size}")
+            xset_path.write_text("\n".join(out_x) + "\n", encoding="utf-8")
+
+        # 7. ~/.xprofile
+        xprof = HOME / ".xprofile"
+        prof_lines = []
+        if xprof.exists():
+            prof_lines = xprof.read_text(encoding="utf-8", errors="ignore").splitlines()
+        out_prof = []
+        for l in prof_lines:
+            if not l.startswith("export XCURSOR_THEME=") and not l.startswith("export XCURSOR_SIZE="):
+                out_prof.append(l)
+        out_prof.append(f'export XCURSOR_THEME="{theme_id}"')
+        out_prof.append(f'export XCURSOR_SIZE="{size}"')
+        xprof.write_text("\n".join(out_prof) + "\n", encoding="utf-8")
+
+        # 8. Environment & Live X11/D-Bus updates
+        os.environ["XCURSOR_THEME"] = theme_id
+        os.environ["XCURSOR_SIZE"] = str(size)
+
+        subprocess.run(["gsettings", "set", "org.gnome.desktop.interface", "cursor-theme", theme_id], check=False)
+        subprocess.run(["gsettings", "set", "org.gnome.desktop.interface", "cursor-size", str(size)], check=False)
+        subprocess.run(["xrdb", "-merge", str(XRESOURCES_PATH)], check=False)
+        subprocess.run(["xsetroot", "-cursor_name", "left_ptr"], check=False)
+        subprocess.run(["killall", "-HUP", "xsettingsd"], check=False)
+        subprocess.run(["systemctl", "--user", "import-environment", "XCURSOR_THEME", "XCURSOR_SIZE"], check=False)
+        subprocess.run(["dbus-update-activation-environment", "--systemd", "XCURSOR_THEME", "XCURSOR_SIZE"], check=False)
+
+        return True, f"Курсор «{theme_id}» ({size}px) успешно применён во всей системе"
+    except Exception as e:
+        return False, f"Ошибка применения курсора: {e}"
+
+# ==============================================================================
 # Autostart Manager Backend (Apps, i3 Session Scripts, Systemd User Services)
 # ==============================================================================
 
@@ -1619,6 +1895,36 @@ class ControlCenterWindow(Gtk.Window):
         self.switch_middle = row_mid.switch
         buttons_card.pack_start(row_mid.box, False, False, 0)
 
+        # Group 4: Cursor Theme & Size (Quick Link)
+        root.pack_start(self.build_section_header("Курсор мыши во всей системе"), False, False, 0)
+        mouse_cursor_card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=14)
+        add_class(mouse_cursor_card, "card")
+        root.pack_start(mouse_cursor_card, False, False, 0)
+
+        mc_head = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
+        mc_title = Gtk.Label(label="Системный указатель мыши", xalign=0)
+        add_class(mc_title, "card-title")
+        mc_sub = Gtk.Label(
+            label="Синхронизирован один стиль и размер для рабочего стола, GTK, Chromium, Discord и Steam.",
+            xalign=0,
+        )
+        add_class(mc_sub, "card-row-subtitle")
+        mc_head.pack_start(mc_title, False, False, 0)
+        mc_head.pack_start(mc_sub, False, False, 0)
+        mouse_cursor_card.pack_start(mc_head, False, False, 0)
+
+        mc_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
+        cur_c_th, cur_c_sz = get_current_cursor_settings()
+        self.mouse_cursor_badge = Gtk.Label(label=f"Курсор: {cur_c_th} ({cur_c_sz}px)")
+        add_class(self.mouse_cursor_badge, "m3-chip")
+        mc_row.pack_start(self.mouse_cursor_badge, False, False, 0)
+
+        btn_go_cursor = Gtk.Button(label="Выбрать тему и размер курсора (Внешний вид)")
+        add_class(btn_go_cursor, "btn-tonal")
+        btn_go_cursor.connect("clicked", lambda _: self.select_page("appearance"))
+        mc_row.pack_end(btn_go_cursor, False, False, 0)
+        mouse_cursor_card.pack_start(mc_row, False, False, 0)
+
         # Group 5: Interactive Test Area
         root.pack_start(self.build_section_header("Проверка параметров"), False, False, 0)
         test_card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
@@ -2261,33 +2567,110 @@ class ControlCenterWindow(Gtk.Window):
         themes_row.pack_end(open_selector_btn, False, False, 0)
         theme_card.pack_start(themes_row, False, False, 0)
 
-        # Group 3: Mouse Cursor
-        root.pack_start(self.build_section_header("Курсор мыши"), False, False, 0)
-        cursor_card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
+        # Group 3: Mouse Cursor (Material Design 3 Unified Cursor Manager)
+        root.pack_start(self.build_section_header("Курсор мыши во всей системе"), False, False, 0)
+        cursor_card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=14)
         add_class(cursor_card, "card")
         root.pack_start(cursor_card, False, False, 0)
 
-        c_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=14)
-        c_lbl = Gtk.Label(label="Тема курсора:", xalign=0)
-        self.cursor_entry = Gtk.Entry()
-        self.cursor_entry.set_text("clay-dark-cursors")
+        c_head_row = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
+        c_head_title = Gtk.Label(label="Системный указатель мыши (Курсор)", xalign=0)
+        add_class(c_head_title, "card-title")
+        c_head_desc = Gtk.Label(
+            label="Синхронизирует один курсор для всех приложений: рабочего стола X11, GTK 2/3/4, Qt, Chromium, Discord (Electron), Steam и терминалов.",
+            xalign=0,
+        )
+        add_class(c_head_desc, "card-row-subtitle")
+        c_head_row.pack_start(c_head_title, False, False, 0)
+        c_head_row.pack_start(c_head_desc, False, False, 0)
+        cursor_card.pack_start(c_head_row, False, False, 0)
 
-        size_lbl = Gtk.Label(label="Размер:", xalign=0)
+        # Active Badges Row
+        cur_c_theme, cur_c_size = get_current_cursor_settings()
+        c_badges_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
+        
+        self.cursor_theme_badge = Gtk.Label(label=f"Текущая тема: {cur_c_theme}")
+        add_class(self.cursor_theme_badge, "m3-chip")
+        
+        self.cursor_size_badge = Gtk.Label(label=f"Размер: {cur_c_size} px")
+        add_class(self.cursor_size_badge, "m3-chip")
+
+        c_badges_row.pack_start(self.cursor_theme_badge, False, False, 0)
+        c_badges_row.pack_start(self.cursor_size_badge, False, False, 0)
+        cursor_card.pack_start(c_badges_row, False, False, 0)
+
+        # Controls Row: Theme Dropdown + Size Dropdown
+        controls_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=14)
+
+        # Theme Selector
+        theme_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
+        theme_box_lbl = Gtk.Label(label="Тема курсора:", xalign=0)
+        add_class(theme_box_lbl, "card-subtitle")
+        self.cursor_theme_combo = Gtk.ComboBoxText()
+        
+        self.available_cursor_themes = get_installed_cursor_themes()
+        active_c_idx = 0
+        for idx, t in enumerate(self.available_cursor_themes):
+            label = f"{t['name']}  ({t['id']})" if t['name'] != t['id'] else t['name']
+            self.cursor_theme_combo.append_text(label)
+            if t['id'] == cur_c_theme or t['name'] == cur_c_theme:
+                active_c_idx = idx
+        if self.available_cursor_themes:
+            self.cursor_theme_combo.set_active(active_c_idx)
+        
+        theme_box.pack_start(theme_box_lbl, False, False, 0)
+        theme_box.pack_start(self.cursor_theme_combo, True, True, 0)
+        controls_row.pack_start(theme_box, True, True, 0)
+
+        # Size Selector
+        size_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
+        size_box_lbl = Gtk.Label(label="Размер указателя:", xalign=0)
+        add_class(size_box_lbl, "card-subtitle")
         self.cursor_size_combo = Gtk.ComboBoxText()
-        for s in ["16", "24", "32", "48"]:
-            self.cursor_size_combo.append_text(s)
-        self.cursor_size_combo.set_active(1)
+        self.cursor_sizes = [16, 24, 32, 48]
+        size_labels = {
+            16: "16 px (Компактный)",
+            24: "24 px (Стандартный)",
+            32: "32 px (Крупный / 2K)",
+            48: "48 px (4K / Ultra)",
+        }
+        active_sz_idx = 1
+        for idx, s in enumerate(self.cursor_sizes):
+            self.cursor_size_combo.append_text(size_labels.get(s, f"{s} px"))
+            if s == cur_c_size:
+                active_sz_idx = idx
+        self.cursor_size_combo.set_active(active_sz_idx)
+        size_box.pack_start(size_box_lbl, False, False, 0)
+        size_box.pack_start(self.cursor_size_combo, False, False, 0)
+        controls_row.pack_start(size_box, False, False, 0)
 
-        c_row.pack_start(c_lbl, False, False, 0)
-        c_row.pack_start(self.cursor_entry, True, True, 0)
-        c_row.pack_start(size_lbl, False, False, 0)
-        c_row.pack_start(self.cursor_size_combo, False, False, 0)
-        cursor_card.pack_start(c_row, False, False, 0)
+        cursor_card.pack_start(controls_row, False, False, 0)
 
-        save_cursor_btn = Gtk.Button(label="Сохранить настройки курсора в ~/.Xresources")
-        add_class(save_cursor_btn, "btn-tonal")
-        save_cursor_btn.connect("clicked", self.on_save_cursor_clicked)
-        cursor_card.pack_start(save_cursor_btn, False, False, 0)
+        # Action Buttons Row
+        actions_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
+        apply_c_btn = Gtk.Button(label="Применить во всей системе")
+        add_class(apply_c_btn, "btn-primary")
+        apply_c_btn.connect("clicked", self.on_apply_cursor_clicked)
+        actions_row.pack_start(apply_c_btn, False, False, 0)
+
+        bibata_preset_btn = Gtk.Button(label="Выбрать Bibata Modern (Рекомендовано)")
+        add_class(bibata_preset_btn, "btn-tonal")
+        bibata_preset_btn.connect("clicked", self.on_quick_apply_bibata_clicked)
+        actions_row.pack_start(bibata_preset_btn, False, False, 0)
+        cursor_card.pack_start(actions_row, False, False, 0)
+
+        # Interactive Test Pad
+        test_hover_box = Gtk.EventBox()
+        add_class(test_hover_box, "test-pad")
+        test_hover_box.set_size_request(-1, 55)
+        test_inner = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
+        test_inner.set_halign(Gtk.Align.CENTER)
+        test_inner.set_valign(Gtk.Align.CENTER)
+        test_lbl = Gtk.Label(label="Наведите мышь сюда для мгновенной проверки вида и размера курсора")
+        test_lbl.set_opacity(0.8)
+        test_inner.pack_start(test_lbl, False, False, 0)
+        test_hover_box.add(test_inner)
+        cursor_card.pack_start(test_hover_box, False, False, 0)
 
         return scrolled
 
@@ -2308,27 +2691,37 @@ class ControlCenterWindow(Gtk.Window):
                 self.set_status(f"Тема «{th}» применяется...")
                 GLib.timeout_add(1200, lambda: (self.reload_material_you_palette(notify=True), False)[1])
 
-    def on_save_cursor_clicked(self, _btn: Gtk.Button) -> None:
-        th = self.cursor_entry.get_text().strip() or "clay-dark-cursors"
-        sz = self.cursor_size_combo.get_active_text() or "24"
-        lines = [
-            "! === Xft Font Rendering Tweaks ===",
-            "Xft.autohint:   0",
-            "Xft.antialias:  1",
-            "Xft.hinting:    1",
-            "Xft.hintstyle:  hintslight",
-            "Xft.rgba:       rgb",
-            "Xft.lcdfilter:  lcddefault",
-            "Xft.dpi:        96",
-            "",
-            "! === Xcursor Settings ===",
-            f"Xcursor.theme:      {th}",
-            f"Xcursor.size:       {sz}",
-            "Xcursor.theme_core: true",
-        ]
-        XRESOURCES_PATH.write_text("\n".join(lines) + "\n", encoding="utf-8")
-        run_command(["xrdb", "-merge", str(XRESOURCES_PATH)])
-        self.set_status(f"Курсор {th} ({sz}px) сохранён и применён")
+    def on_apply_cursor_clicked(self, _btn: Gtk.Button) -> None:
+        idx = self.cursor_theme_combo.get_active()
+        if idx >= 0 and idx < len(self.available_cursor_themes):
+            theme_id = self.available_cursor_themes[idx]["id"]
+        else:
+            theme_id = "Bibata-Modern-Classic"
+
+        sz_idx = self.cursor_size_combo.get_active()
+        if sz_idx >= 0 and sz_idx < len(self.cursor_sizes):
+            size = self.cursor_sizes[sz_idx]
+        else:
+            size = 24
+
+        ok, msg = apply_cursor_theme_systemwide(theme_id, size)
+        if ok:
+            self.cursor_theme_badge.set_text(f"Текущая тема: {theme_id}")
+            self.cursor_size_badge.set_text(f"Размер: {size} px")
+            if hasattr(self, "mouse_cursor_badge"):
+                self.mouse_cursor_badge.set_text(f"Курсор: {theme_id} ({size}px)")
+            self.set_status(f"Указатель мыши «{theme_id}» ({size}px) применён во всей системе!")
+        else:
+            self.set_status(msg)
+
+    def on_quick_apply_bibata_clicked(self, _btn: Gtk.Button) -> None:
+        for idx, t in enumerate(self.available_cursor_themes):
+            if t["id"] == "Bibata-Modern-Classic":
+                self.cursor_theme_combo.set_active(idx)
+                break
+        self.cursor_size_combo.set_active(1)  # 24 px
+        self.on_apply_cursor_clicked(_btn)
+
 
     # --------------------------------------------------------------------------
     # Page 6: Autostart
