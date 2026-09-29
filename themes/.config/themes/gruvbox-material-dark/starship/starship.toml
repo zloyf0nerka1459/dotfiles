@@ -1,0 +1,98 @@
+"$schema" = 'https://starship.rs/config-schema.json'
+
+add_newline = false
+format = """
+[  ](bg:bg1 fg:yellow)\
+$username\
+$directory\
+$git_branch\
+$git_status\
+$c\
+$golang\
+$haskell\
+$java\
+$nodejs\
+$rust\
+$python\
+$time\
+$line_break\
+[ 󱞪](fg:orange) \
+"""
+
+palette = "gruvbox-material-dark"
+
+[palettes.gruvbox-material-dark]
+bg_dim = '#1b1b1b'
+bg1 = '#32302f'
+bg3 = '#45403d'
+fg1 = '#ddc7a1'
+orange = '#e78a4e'
+blue = '#7daea3'
+yellow = '#d8a657'
+purple = '#d3869b'
+
+[directory]
+style = "bg:bg3 fg:fg1"
+format = "[ $path ]($style)"
+truncate_to_repo = false
+
+[directory.substitutions]
+Documents = "󰈙"
+Downloads = " "
+Music = " "
+Pictures = " "
+
+[git_branch]
+style = "bg:orange fg:bg_dim"
+format = "[ $symbol $branch ]($style)"
+symbol = ""
+
+[git_status]
+style = "bg:orange fg:bg_dim"
+format = '([ $all_status$ahead_behind ]($style))'
+
+[time]
+style = "bg:purple fg:bg_dim"
+format = "[ 󱑂 $time ]($style)"
+time_format = "%R"
+disabled = false
+
+[username]
+style_user = "bg:bg1 fg:yellow"
+format = "[$user ]($style)"
+show_always = true
+
+[c]
+style = "bg:blue fg:bg_dim"
+format = "[ $symbol$version ]($style)"
+symbol = " "
+
+[golang]
+style = "bg:blue fg:bg_dim"
+format = "[ $symbol$version ]($style)"
+symbol = " "
+
+[haskell]
+style = "bg:blue fg:bg_dim"
+format = "[ $symbol$version ]($style)"
+symbol = " "
+
+[java]
+style = "bg:blue fg:bg_dim"
+format = "[ $symbol$version ]($style)"
+symbol = " "
+
+[nodejs]
+style = "bg:blue fg:bg_dim"
+format = "[ $symbol$version ]($style)"
+symbol = "󰎙 "
+
+[python]
+style = "bg:blue fg:bg_dim"
+format = "[ $symbol$version ]($style)"
+symbol = ' '
+
+[rust]
+style = "bg:blue fg:bg_dim"
+format = "[ $symbol$version ]($style)"
+symbol = " "

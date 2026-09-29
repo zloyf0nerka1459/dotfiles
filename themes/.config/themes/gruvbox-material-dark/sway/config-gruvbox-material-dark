@@ -1,0 +1,7 @@
+# Output & Appearance
+output * bg ~/.config/sway/wallpapers/wallpaper-gruvbox-material-dark.png fill
+
+client.focused          #e78a4e #e78a4e #1b1b1b #e78a4e
+client.focused_inactive #e78a4e #e78a4e #1b1b1b #e78a4e
+client.unfocused        #d4be90 #d4be90 #1b1b1b #d4be90
+client.urgent           #ea6962 #ea6962 #1b1b1b #ea6962

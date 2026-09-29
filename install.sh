@@ -76,6 +76,10 @@ PACMAN_PACKAGES=(
     polkit-kde-agent
     xsettingsd
     spice-vdagent
+    fastfetch
+    fish
+    eza
+    fzf
 )
 
 log "Проверка и установка зависимостей..."
@@ -102,7 +106,7 @@ done
 
 # 3. Backup existing configs
 title "Резервное копирование существующих конфигураций"
-STOW_PACKAGES=(i3 eww picom kitty rofi dunst themes wal starship gtk bin xorg system-control-center)
+STOW_PACKAGES=(i3 eww picom kitty rofi dunst themes wal starship gtk fastfetch fish bin xorg system-control-center)
 mkdir -p "$BACKUP_DIR"
 
 backup_if_needed() {
@@ -124,6 +128,8 @@ backup_if_needed "$HOME/.config/wal"
 backup_if_needed "$HOME/.config/starship.toml"
 backup_if_needed "$HOME/.config/gtk-3.0"
 backup_if_needed "$HOME/.config/xsettingsd"
+backup_if_needed "$HOME/.config/fastfetch"
+backup_if_needed "$HOME/.config/fish"
 backup_if_needed "$HOME/.Xresources"
 backup_if_needed "$HOME/.config/system-control-center"
 
@@ -132,7 +138,7 @@ title "Связывание конфигураций через GNU Stow"
 cd "$DOTFILES_DIR"
 for pkg in "${STOW_PACKAGES[@]}"; do
     if [ -d "$DOTFILES_DIR/$pkg" ]; then
-        stow -v -R -t "$HOME" "$pkg"
+        stow -v --adopt -R -t "$HOME" "$pkg" || stow -v -R -t "$HOME" "$pkg" || warn "Внимание при связывании $pkg"
         log "Связано: $pkg"
     fi
 done

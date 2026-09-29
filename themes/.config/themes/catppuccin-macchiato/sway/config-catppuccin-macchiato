@@ -1,0 +1,7 @@
+# Output & Appearance
+output * bg ~/.config/sway/wallpapers/wallpaper-catppuccin-macchiato.png fill
+
+client.focused          #b7bdf8 #b7bdf8 #24273a #b7bdf8
+client.focused_inactive #b7bdf8 #b7bdf8 #24273a #b7bdf8
+client.unfocused        #6e738d #6e738d #24273a #6e738d
+client.urgent           #ed8796 #ed8796 #24273a #ed8796

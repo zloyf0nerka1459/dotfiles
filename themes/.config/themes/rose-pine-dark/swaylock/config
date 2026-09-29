@@ -1,0 +1,25 @@
+image=~/.config/sway/themes/rose-pine-dark/swaylock/swaylock-image-rose-pine-dark.png
+font=JetBrains Mono
+font-size=11
+bs-hl-color=c4a7e7
+inside-color=191724
+inside-clear-color=191724
+inside-ver-color=191724
+inside-wrong-color=191724
+key-hl-color=c4a7e7
+line-color=26233a
+line-clear-color=26233a
+line-ver-color=26233a
+line-wrong-color=26233a
+ring-color=26233a
+ring-clear-color=f6c177
+ring-ver-color=9ccfd8
+ring-wrong-color=ed8796
+separator-color=c4a7e7
+text-color=e0def4
+text-clear-color=e0def4
+text-ver-color=e0def4
+text-wrong-color=e0def4
+layout-bg-color=00000000
+layout-text-color=e0def4
+ignore-empty-password

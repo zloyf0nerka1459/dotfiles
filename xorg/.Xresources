@@ -14,5 +14,5 @@ Xft.dpi:        96
 
 ! === Xcursor Settings ===
 Xcursor.theme:      Bibata-Modern-Classic
-Xcursor.size:       24
+Xcursor.size:       16
 Xcursor.theme_core: true

@@ -1,0 +1,252 @@
+* {
+  color: @text;
+  font-family: JetBrains Mono;
+  font-size: 11px;
+}
+
+@define-color base #191724;
+@define-color surface #1f1d2e;
+@define-color overlay #26233a;
+@define-color overlay-2 #6e6a86;
+@define-color highlight-med #403d52;
+@define-color highlight-high #524f67;
+@define-color text #e0def4;
+@define-color iris #c4a7e7;
+@define-color love #eb6f92;
+
+.notification-group,
+.notification-background,
+.notification-content,
+.notification-default-action,
+.notification-alt-actions,
+.summary,
+.time,
+.body,
+.control-center-list,
+.floating-notifications,
+.blank-window {
+  background-color: transparent;
+}
+.floating-notifications .notification {
+  margin-right: 6px;
+}
+
+.notification-group .notification-group-buttons,
+.notification-group .notification-group-headers {
+  margin: 2px 2px 4px 2px;
+  padding: 0;
+}
+.notification-group .notification-group-buttons > button,
+.notification-group .notification-group-headers > button {
+  margin-left: 2px;
+  padding: 0;
+  min-width: 24px;
+  min-height: 24px;
+  background: @overlay;
+}
+.notification-group .notification-group-buttons > button:hover {
+  background-color: @highlight-med;
+}
+.notification-group .notification-group-buttons > button:active {
+  background-color: @highlight-high;
+}
+.notification-row {
+  margin-top: 3px;
+  outline: none;
+  border-radius: 6px;
+}
+.notification-background {
+  padding: 4px 2px;
+}
+.notification {
+  padding: 4px 8px;
+  border: 2px solid @iris;
+  border-radius: 6px;
+  background-color: @surface;
+  box-shadow: none;
+}
+.notification-default-action {
+  margin: 0;
+  padding: 4px 8px;
+  border: none;
+  border-radius: 6px;
+}
+.notification-default-action:not(:only-child) {
+  border-bottom-left-radius: 0px;
+  border-bottom-right-radius: 0px;
+}
+.notification-content {
+  margin: 4px 0px;
+  padding: 4px 0px;
+}
+.image {
+  margin: 0px 16px 0px 0;
+  border-radius: 6px;
+}
+.app-icon {
+  margin: 4px 8px 4px 0px;
+}
+.summary {
+  font-weight: bold;
+}
+.time {
+  color: @love;
+}
+.body {
+  color: @text;
+  font-weight: normal;
+}
+.notification-alt-actions {
+  border-bottom-left-radius: 0px;
+  border-bottom-right-radius: 0px;
+}
+.notification-action {
+  min-height: 24px;
+  min-width: 24px;
+  background-color: transparent;
+}
+.notification-action > button {
+  border: none;
+  border-radius: 6px;
+  background-color: @highlight-med;
+}
+.notification-action > button:hover {
+  background: @iris;
+  color: @base;
+}
+
+.close-button {
+  margin: 8px;
+  padding: 0;
+  border: none;
+  border-radius: 100%;
+  min-width: 24px;
+  min-height: 24px;
+  background: @overlay;
+  box-shadow: none;
+}
+.close-button:hover {
+  background: @highlight-med;
+}
+.close-button:active {
+  background: @highlight-high;
+}
+.notification-group .notification-group-close-button .close-button {
+  margin: 15px 10px;
+}
+
+.floating-notifications .close-button {
+  margin: 8px 14px;
+}
+
+.control-center {
+  border-left: 2px solid @overlay-2;
+  border-radius: 0px;
+  background: @base;
+}
+.control-center-list-placeholder {
+  opacity: 0.5;
+}
+.widget-title {
+  margin: 8px 8px 3px 8px;
+  padding-left: 8px;
+  border-radius: 6px;
+  background: @overlay;
+}
+.widget-title > button {
+  border: none;
+  border-radius: 6px;
+  background: @overlay;
+  box-shadow: none;
+}
+.widget-title > button:hover {
+  background: @highlight-med;
+  color: @overlay;
+}
+.widget-title > button:active {
+  background: @highlight-high;
+}
+.widget-mpris {
+  margin: 8px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: @overlay;
+}
+.widget-mpris > box > button {
+  margin: 4px 0;
+  border-radius: 6px;
+  background: @overlay;
+}
+.widget-mpris > box > button:hover {
+  background: @highlight-med;
+}
+.widget-mpris > box > button:active {
+  background: @highlight-high;
+}
+.widget-mpris-player {
+  margin: 4px 8px 4px 8px;
+  padding: 4px 8px;
+  border: 2px solid @overlay-2;
+  border-radius: 6px;
+  color: @text;
+  box-shadow: none;
+}
+.widget-mpris .widget-mpris-player .mpris-overlay {
+  padding: 16px;
+  background-color: transparent;
+}
+.widget-mpris .widget-mpris-player .mpris-overlay button:hover {
+  background: @highlight-med;
+}
+.widget-mpris .widget-mpris-player .mpris-overlay button:active {
+  background: @highlight-high;
+}
+.widget-mpris-album-art {
+  border-radius: 6px;
+  box-shadow: none;
+}
+.widget-buttons-grid {
+  margin: 8px;
+  padding: 4px 9px;
+  border-radius: 6px;
+  background: @overlay;
+}
+.widget-buttons-grid > flowbox > flowboxchild > button {
+  margin: 1px 4px;
+  padding: 5px;
+  border-radius: 6px;
+  background: @highlight-med;
+}
+.widget-buttons-grid > flowbox > flowboxchild > button:hover {
+  background: @iris;
+}
+.widget-buttons-grid > flowbox > flowboxchild > button:hover label {
+  color: @highlight-med;
+}
+.widget-buttons-grid > flowbox > flowboxchild > button:checked {
+  background: @iris;
+}
+.widget-buttons-grid > flowbox > flowboxchild > button:checked label {
+  color: @highlight-med;
+}
+.widget-menubar > box > .menu-button-bar > button {
+  border: none;
+  background: transparent;
+}
+.topbar-buttons > button {
+  border: none;
+  background: transparent;
+}
+scrollbar {
+  background: transparent;
+}
+scrollbar slider {
+  margin: 0;
+  background: @overlay;
+}
+scrollbar slider:hover {
+  background: @highlight-med;
+}
+scrollbar slider:active {
+  background: @highlight-high;
+}

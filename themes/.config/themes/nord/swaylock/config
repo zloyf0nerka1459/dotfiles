@@ -1,0 +1,25 @@
+image=~/.config/sway/themes/nord/swaylock/swaylock-image-nord.png
+font=JetBrains Mono
+font-size=11
+bs-hl-color=5e81ac
+inside-color=2e3440
+inside-clear-color=2e3440
+inside-ver-color=2e3440
+inside-wrong-color=2e3440
+key-hl-color=5e81ac
+line-color=434c5e
+line-clear-color=434c5e
+line-ver-color=434c5e
+line-wrong-color=434c5e
+ring-color=434c5e
+ring-clear-color=ebcb8b
+ring-ver-color=88c0d0
+ring-wrong-color=#bf616a
+separator-color=5e81ac
+text-color=eceff4
+text-clear-color=eceff4
+text-ver-color=eceff4
+text-wrong-color=eceff4
+layout-bg-color=00000000
+layout-text-color=eceff4
+ignore-empty-password

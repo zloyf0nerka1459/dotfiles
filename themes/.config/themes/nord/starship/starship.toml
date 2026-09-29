@@ -1,0 +1,104 @@
+"$schema" = 'https://starship.rs/config-schema.json'
+
+add_newline = false
+format = """
+[](nord1)\
+[ ☥ ](bg:nord1 fg:nord9)\
+$username\
+[](bg:nord2 fg:nord1)\
+$directory\
+[](bg:nord13 fg:nord2)\
+$git_branch\
+$git_status\
+[](bg:nord10 fg:nord13)\
+$c\
+$golang\
+$haskell\
+$java\
+$nodejs\
+$rust\
+$python\
+[](bg:nord3 fg:nord10)\
+$time\
+[](bg:nord0 fg:nord3)\
+$line_break\
+[ 󱞪](fg:nord10) \
+"""
+
+palette = "nord"
+
+[palettes.nord]
+nord0 = '#2e3440'
+nord1 = '#3b4252'
+nord2 = '#434c5e'
+nord3 = '#4c566a'
+nord6 = '#eceff4'
+nord9 = '#81a1c1'
+nord10 = '#5e81ac'
+nord13 = '#ebcb8b'
+
+[directory]
+style = "bg:nord2 fg:nord6"
+format = "[ $path ]($style)"
+truncate_to_repo = false
+
+[directory.substitutions]
+Documents = "󰈙"
+Downloads = " "
+Music = " "
+Pictures = " "
+
+[git_branch]
+style = "bg:nord13 fg:nord0"
+format = "[ $symbol $branch ]($style)"
+symbol = ""
+
+[git_status]
+style = "bg:nord13 fg:nord0"
+format = '([ $all_status$ahead_behind ]($style))'
+
+[time]
+style = "bg:nord3 fg:nord6"
+format = "[ $time ]($style)"
+time_format = "%R 󱦟"
+disabled = false
+
+[username]
+style_user = "bg:nord1 fg:nord9"
+format = "[$user ]($style)"
+show_always = true
+
+[c]
+style = "bg:nord10 fg:nord6"
+format = "[ $symbol$version ]($style)"
+symbol = " "
+
+[golang]
+style = "bg:nord10 fg:nord6"
+format = "[ $symbol$version ]($style)"
+symbol = " "
+
+[haskell]
+style = "bg:nord10 fg:nord6"
+format = "[ $symbol$version ]($style)"
+symbol = " "
+
+[java]
+style = "bg:nord10 fg:nord6"
+format = "[ $symbol$version ]($style)"
+symbol = " "
+
+[nodejs]
+style = "bg:nord10 fg:nord6"
+format = "[ $symbol$version ]($style)"
+symbol = "󰎙 "
+
+[python]
+style = "bg:nord10 fg:nord6"
+format = "[ $symbol$version ]($style)"
+symbol = ' '
+
+[rust]
+style = "bg:nord10 fg:nord6"
+format = "[ $symbol$version ]($style)"
+symbol = " "

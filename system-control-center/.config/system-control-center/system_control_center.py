@@ -2435,7 +2435,7 @@ class ControlCenterWindow(Gtk.Window):
         self.keyboard_repeat_delay = delay
         self.keyboard_repeat_rate = rate
 
-        run_command(["setxkbmap", "-layout", layouts, "-option", switch_opt])
+        run_command(["setxkbmap", "-option", "", "-layout", layouts, "-option", switch_opt])
         run_command(["xset", "r", "rate", str(delay), str(rate)])
 
         save_all_input_settings(self.devices, layouts, switch_opt, delay, rate)

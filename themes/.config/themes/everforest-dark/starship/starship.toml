@@ -1,0 +1,104 @@
+"$schema" = 'https://starship.rs/config-schema.json'
+
+add_newline = false
+format = """
+[](bg1)\
+[  ](bg:bg1 fg:aqua)\
+$username\
+[](bg:bg2 fg:bg1)\
+$directory\
+[](bg:green fg:bg2)\
+$git_branch\
+$git_status\
+[](bg:blue fg:green)\
+$c\
+$golang\
+$haskell\
+$java\
+$nodejs\
+$rust\
+$python\
+[](bg:bg3 fg:blue)\
+$time\
+[](bg:bg0 fg:bg3)\
+$line_break\
+[ 󱞪](fg:green) \
+"""
+
+palette = "everforest-dark"
+
+[palettes.everforest-dark]
+bg0 = '#2d353b'
+bg1 = '#343f44'
+bg2 = '#3d484d'
+bg3 = '#475258'
+fg = '#d3c6aa'
+green = '#a7c080'
+blue = '#7fbbb3'
+aqua = '#83c092'
+
+[directory]
+style = "bg:bg2 fg:fg"
+format = "[ $path ]($style)"
+truncate_to_repo = false
+
+[directory.substitutions]
+Documents = "󰈙"
+Downloads = " "
+Music = " "
+Pictures = " "
+
+[git_branch]
+style = "bg:green fg:bg0"
+format = "[ $symbol $branch ]($style)"
+symbol = ""
+
+[git_status]
+style = "bg:green fg:bg0"
+format = '([ $all_status$ahead_behind ]($style))'
+
+[time]
+style = "bg:bg3 fg:fg"
+format = "[ $time ]($style)"
+time_format = "%R"
+disabled = false
+
+[username]
+style_user = "bg:bg1 fg:aqua"
+format = "[$user ]($style)"
+show_always = true
+
+[c]
+style = "bg:blue fg:bg0"
+format = "[ $symbol$version ]($style)"
+symbol = " "
+
+[golang]
+style = "bg:blue fg:bg0"
+format = "[ $symbol$version ]($style)"
+symbol = " "
+
+[haskell]
+style = "bg:blue fg:bg0"
+format = "[ $symbol$version ]($style)"
+symbol = " "
+
+[java]
+style = "bg:blue fg:bg0"
+format = "[ $symbol$version ]($style)"
+symbol = " "
+
+[nodejs]
+style = "bg:blue fg:bg0"
+format = "[ $symbol$version ]($style)"
+symbol = "󰎙 "
+
+[python]
+style = "bg:blue fg:bg0"
+format = "[ $symbol$version ]($style)"
+symbol = ' '
+
+[rust]
+style = "bg:blue fg:bg0"
+format = "[ $symbol$version ]($style)"
+symbol = " "

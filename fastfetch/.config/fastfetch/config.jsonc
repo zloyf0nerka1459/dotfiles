@@ -1,0 +1,144 @@
+{
+  "$schema": "https://github.com/fastfetch-cli/fastfetch/raw/dev/doc/json_schema.json",
+
+  // === ЛОГОТИП ===
+  "logo": {
+    "source": "~/.config/fastfetch/images/nanachi.jpg",
+    "type": "auto",
+    "height": 18,
+    "padding": {
+      "top": 0,
+      "left": 1,
+      "right": 3
+    }
+  },
+
+  // === ОБЩИЙ СТИЛЬ ===
+  "display": {
+    "separator": "  ·  ",
+    "color": {
+      "separator": "#727a63",
+      "output": "#c8c9c6"
+    },
+    "percent": {
+      "type": 9,
+      "color": {
+        "green": "#bac4ac",
+        "yellow": "#d4a373",
+        "red": "#c97a7e"
+      }
+    }
+  },
+
+  // === МОДУЛИ ===
+  "modules": [
+    // Пользователь и хост
+    {
+      "type": "title",
+      "color": {
+        "user": "#d4a373",
+        "at": "#727a63",
+        "host": "#8daab6"
+      }
+    },
+    {
+      "type": "separator",
+      "string": "─",
+      "outputColor": "#727a63"
+    },
+
+    // Секция: Система и окружение (Теплый песочно-карамельный акцент)
+    {
+      "type": "os",
+      "key": "󰣇  os          ",
+      "keyColor": "#d4a373",
+      "format": "{name} {arch}"
+    },
+    {
+      "type": "host",
+      "key": "󰌢  host        ",
+      "keyColor": "#d4a373",
+      "format": "{name}"
+    },
+    {
+      "type": "kernel",
+      "key": "󰌽  kernel      ",
+      "keyColor": "#d4a373",
+      "format": "{release}"
+    },
+    {
+      "type": "uptime",
+      "key": "󰅐  uptime      ",
+      "keyColor": "#d4a373",
+      "format": "{?days}{days}d {?}{?hours}{hours}h {?}{minutes}m"
+    },
+    {
+      "type": "packages",
+      "key": "󰏖  pkgs        ",
+      "keyColor": "#d4a373",
+      "format": "{all}"
+    },
+    {
+      "type": "wm",
+      "key": "  wm          ",
+      "keyColor": "#d4a373",
+      "format": "{pretty-name}"
+    },
+    {
+      "type": "terminal",
+      "key": "  terminal    ",
+      "keyColor": "#d4a373",
+      "format": "{pretty-name}"
+    },
+    {
+      "type": "shell",
+      "key": "  shell       ",
+      "keyColor": "#d4a373",
+      "format": "{exe-name}{?version} {version}{?}"
+    },
+
+    "break",
+
+    // Секция: Железо и ресурсы (Приглушенный шалфейно-голубой акцент)
+    {
+      "type": "cpu",
+      "key": "󰻠  cpu         ",
+      "keyColor": "#8daab6",
+      "format": "Intel {name~18,100} ({cores-logical}) @ {freq-max}"
+    },
+    {
+      "type": "gpu",
+      "key": "󰢮  gpu         ",
+      "keyColor": "#8daab6",
+      "format": "{name}"
+    },
+    {
+      "type": "memory",
+      "key": "󰑭  memory      ",
+      "keyColor": "#8daab6",
+      "format": "{used} / {total} ({percentage})"
+    },
+    {
+      "type": "disk",
+      "key": "󰋊  disk (/)    ",
+      "keyColor": "#8daab6",
+      "folders": "/",
+      "format": "{size-used} / {size-total} ({size-percentage})"
+    },
+    {
+      "type": "disk",
+      "key": "󰋊  disk (~)    ",
+      "keyColor": "#8daab6",
+      "folders": "/home",
+      "format": "{size-used} / {size-total} ({size-percentage})"
+    },
+
+    "break",
+
+    // Палитра терминала
+    {
+      "type": "colors",
+      "symbol": "circle"
+    }
+  ]
+}

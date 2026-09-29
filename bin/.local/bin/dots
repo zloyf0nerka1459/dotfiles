@@ -1,0 +1,394 @@
+#!/usr/bin/env bash
+# ==============================================================================
+# Dots - Arch Linux Dotfiles & Rice Management Tool
+# ==============================================================================
+set -euo pipefail
+
+DOTFILES_DIR="$HOME/dotfiles"
+
+# Colors
+C_RESET=$'\e[0m'
+C_BOLD=$'\e[1m'
+C_CYAN=$'\e[0;36m'
+C_GREEN=$'\e[0;32m'
+C_YELLOW=$'\e[0;33m'
+C_RED=$'\e[0;31m'
+C_MAGENTA=$'\e[0;35m'
+C_BLUE=$'\e[0;34m'
+
+banner() {
+    printf "${C_MAGENTA}${C_BOLD}"
+    cat <<'EOF'
+       __      __      
+  ____/ /___  / /______
+ / __  / __ \/ __/ ___/
+/ /_/ / /_/ / /_(__  ) 
+\__,_/\____/\__/____/  
+EOF
+    printf "${C_CYAN}Arch Linux Rice & Dotfiles Manager${C_RESET}\n\n"
+}
+
+log()   { printf "${C_GREEN}[+]${C_RESET} %s\n" "$*"; }
+warn()  { printf "${C_YELLOW}[!]${C_RESET} %s\n" "$*" >&2; }
+error() { printf "${C_RED}[x]${C_RESET} %s\n" "$*" >&2; exit 1; }
+info()  { printf "${C_BLUE}[*]${C_RESET} %s\n" "$*"; }
+header(){ printf "\n${C_BOLD}${C_CYAN}=== %s ===${C_RESET}\n" "$*"; }
+
+show_help() {
+    banner
+    printf "Использование: ${C_BOLD}dots${C_RESET} <команда> [аргументы]\n\n"
+    printf "Команды:\n"
+    printf "  ${C_GREEN}status${C_RESET}         Показать статус репозитория dotfiles и служб рабочего стола\n"
+    printf "  ${C_GREEN}sync${C_RESET}           Синхронизировать текущие конфиги из ~/.config в ~/dotfiles\n"
+    printf "  ${C_GREEN}diff${C_RESET}           Показать различия между live-конфигами и репозиторием dotfiles\n"
+    printf "  ${C_GREEN}reload${C_RESET}         Мягко перезагрузить i3, EWW, Picom, Dunst и применить тему\n"
+    printf "  ${C_GREEN}check${C_RESET}          Проверить синтаксис всех конфигов и скриптов на ошибки\n"
+    printf "  ${C_GREEN}commit [msg]${C_RESET}   Синхронизировать и закоммитить изменения в git\n"
+    printf "  ${C_GREEN}theme [name]${C_RESET}   Выбрать или переключить тему оформления\n"
+    printf "  ${C_GREEN}help${C_RESET}           Показать эту справку\n\n"
+}
+
+cmd_status() {
+    banner
+    header "Статус служб окружения"
+    
+    # 1. i3
+    if pgrep -x i3 >/dev/null; then
+        log "Оконный менеджер: ${C_GREEN}i3 (активен)${C_RESET}"
+    else
+        warn "Оконный менеджер: i3 не запущен"
+    fi
+
+    # 2. EWW
+    if command -v eww >/dev/null 2>&1; then
+        local eww_wins
+        eww_wins=$(eww active-windows 2>/dev/null | awk -F: '{print $1}' | tr '\n' ' ' | xargs || true)
+        if [ -n "$eww_wins" ]; then
+            log "Панели EWW: ${C_GREEN}активны ($eww_wins)${C_RESET}"
+        else
+            warn "Панели EWW: не активны (запустите: eww daemon && ~/.config/eww/launch.sh)"
+        fi
+    fi
+
+    # 3. Picom
+    if pgrep -x picom >/dev/null; then
+        log "Композитор: ${C_GREEN}Picom (активен)${C_RESET}"
+    else
+        warn "Композитор: Picom выключен (Игровой режим)"
+    fi
+
+    # 4. Dunst
+    if pgrep -x dunst >/dev/null; then
+        log "Уведомления: ${C_GREEN}Dunst (активен)${C_RESET}"
+    else
+        warn "Уведомления: Dunst не запущен"
+    fi
+
+    # 5. Текущая тема
+    if [ -f "$HOME/.config/themes/current.theme" ]; then
+        local cur_theme
+        cur_theme=$(grep -E '^NAME=' "$HOME/.config/themes/current.theme" 2>/dev/null | cut -d= -f2- | tr -d '"' || true)
+        [ -n "$cur_theme" ] || cur_theme="Не определена"
+        info "Текущая тема: ${C_BOLD}$cur_theme${C_RESET}"
+    fi
+
+    header "Статус Git репозитория (~/dotfiles)"
+    if [ -d "$DOTFILES_DIR/.git" ]; then
+        git -C "$DOTFILES_DIR" status -s
+        local branch
+        branch=$(git -C "$DOTFILES_DIR" branch --show-current 2>/dev/null || echo "unknown")
+        local commits
+        commits=$(git -C "$DOTFILES_DIR" rev-list --count HEAD 2>/dev/null || echo "0")
+        printf "\nВетка: ${C_CYAN}%s${C_RESET} | Всего коммитов: ${C_BOLD}%s${C_RESET}\n" "$branch" "$commits"
+    else
+        warn "Каталог $DOTFILES_DIR не является git-репозиторием"
+    fi
+}
+
+cmd_sync() {
+    header "Синхронизация live-конфигов в ~/dotfiles"
+    
+    # i3
+    if [ -d "$HOME/.config/i3" ]; then
+        mkdir -p "$DOTFILES_DIR/i3/.config/i3"
+        rsync -a --delete --exclude '_backup' --exclude '*.bak*' "$HOME/.config/i3/" "$DOTFILES_DIR/i3/.config/i3/"
+        log "Синхронизирован i3"
+    fi
+
+    # eww
+    if [ -d "$HOME/.config/eww" ]; then
+        mkdir -p "$DOTFILES_DIR/eww/.config/eww"
+        rsync -a --exclude '*.bak*' --exclude '*.save' --exclude 'colors.scss' "$HOME/.config/eww/" "$DOTFILES_DIR/eww/.config/eww/"
+        log "Синхронизирован EWW"
+    fi
+
+    # picom
+    if [ -d "$HOME/.config/picom" ]; then
+        mkdir -p "$DOTFILES_DIR/picom/.config/picom"
+        rsync -a "$HOME/.config/picom/" "$DOTFILES_DIR/picom/.config/picom/"
+        log "Синхронизирован Picom"
+    fi
+
+    # kitty
+    if [ -d "$HOME/.config/kitty" ]; then
+        mkdir -p "$DOTFILES_DIR/kitty/.config/kitty"
+        rsync -a "$HOME/.config/kitty/" "$DOTFILES_DIR/kitty/.config/kitty/"
+        log "Синхронизирован Kitty"
+    fi
+
+    # rofi
+    if [ -d "$HOME/.config/rofi" ]; then
+        mkdir -p "$DOTFILES_DIR/rofi/.config/rofi"
+        rsync -a --exclude '*.bak*' "$HOME/.config/rofi/" "$DOTFILES_DIR/rofi/.config/rofi/"
+        log "Синхронизирован Rofi"
+    fi
+
+    # dunst
+    if [ -d "$HOME/.config/dunst" ]; then
+        mkdir -p "$DOTFILES_DIR/dunst/.config/dunst"
+        rsync -a "$HOME/.config/dunst/" "$DOTFILES_DIR/dunst/.config/dunst/"
+        log "Синхронизирован Dunst"
+    fi
+
+    # themes
+    if [ -d "$HOME/.config/themes" ]; then
+        mkdir -p "$DOTFILES_DIR/themes/.config/themes"
+        rsync -a --exclude 'current.theme' "$HOME/.config/themes/" "$DOTFILES_DIR/themes/.config/themes/"
+        log "Синхронизированы Темы"
+    fi
+
+    # wal
+    if [ -d "$HOME/.config/wal" ]; then
+        mkdir -p "$DOTFILES_DIR/wal/.config/wal"
+        rsync -a --exclude 'colorschemes' "$HOME/.config/wal/" "$DOTFILES_DIR/wal/.config/wal/"
+        log "Синхронизирован Wal"
+    fi
+
+    # starship
+    if [ -f "$HOME/.config/starship.toml" ]; then
+        mkdir -p "$DOTFILES_DIR/starship/.config"
+        if [ ! -L "$HOME/.config/starship.toml" ] || [ "$(readlink -f "$HOME/.config/starship.toml" 2>/dev/null)" != "$(readlink -f "$DOTFILES_DIR/starship/.config/starship.toml" 2>/dev/null)" ]; then
+            cp -f "$HOME/.config/starship.toml" "$DOTFILES_DIR/starship/.config/starship.toml" 2>/dev/null || true
+        fi
+        log "Синхронизирован Starship"
+    fi
+
+    # fastfetch
+    if [ -d "$HOME/.config/fastfetch" ]; then
+        mkdir -p "$DOTFILES_DIR/fastfetch/.config/fastfetch"
+        rsync -a --exclude '*.bak*' --exclude '*.old' "$HOME/.config/fastfetch/" "$DOTFILES_DIR/fastfetch/.config/fastfetch/"
+        log "Синхронизирован Fastfetch"
+    fi
+
+    # fish
+    if [ -d "$HOME/.config/fish" ]; then
+        mkdir -p "$DOTFILES_DIR/fish/.config/fish"
+        rsync -a --exclude 'fish_variables' "$HOME/.config/fish/" "$DOTFILES_DIR/fish/.config/fish/"
+        log "Синхронизирован Fish"
+    fi
+
+    # gtk & xsettingsd
+    if [ -d "$HOME/.config/gtk-3.0" ]; then
+        mkdir -p "$DOTFILES_DIR/gtk/.config/gtk-3.0"
+        rsync -a "$HOME/.config/gtk-3.0/" "$DOTFILES_DIR/gtk/.config/gtk-3.0/"
+    fi
+    if [ -d "$HOME/.config/xsettingsd" ]; then
+        mkdir -p "$DOTFILES_DIR/gtk/.config/xsettingsd"
+        rsync -a "$HOME/.config/xsettingsd/" "$DOTFILES_DIR/gtk/.config/xsettingsd/"
+    fi
+    log "Синхронизированы GTK / xsettingsd"
+
+    # system-control-center
+    if [ -d "$HOME/.config/system-control-center" ]; then
+        mkdir -p "$DOTFILES_DIR/system-control-center/.config/system-control-center"
+        rsync -a --exclude '__pycache__' --exclude 'backups' --exclude '*.old' "$HOME/.config/system-control-center/" "$DOTFILES_DIR/system-control-center/.config/system-control-center/"
+        log "Синхронизирован System Control Center"
+    fi
+
+    # xorg .Xresources
+    if [ -f "$HOME/.Xresources" ]; then
+        mkdir -p "$DOTFILES_DIR/xorg"
+        if [ ! -L "$HOME/.Xresources" ] || [ "$(readlink -f "$HOME/.Xresources" 2>/dev/null)" != "$(readlink -f "$DOTFILES_DIR/xorg/.Xresources" 2>/dev/null)" ]; then
+            cp -f "$HOME/.Xresources" "$DOTFILES_DIR/xorg/.Xresources" 2>/dev/null || true
+        fi
+        log "Синхронизирован .Xresources"
+    fi
+
+    # bin scripts
+    if [ -d "$HOME/.local/bin" ]; then
+        mkdir -p "$DOTFILES_DIR/bin/.local/bin"
+        for bf in "$HOME/.local/bin"/*; do
+            [ -f "$bf" ] || continue
+            case "$(basename "$bf")" in
+                dots|theme-*|scc|system-control-center)
+                    if [ ! -L "$bf" ] || [ "$(readlink -f "$bf" 2>/dev/null)" != "$(readlink -f "$DOTFILES_DIR/bin/.local/bin/$(basename "$bf")" 2>/dev/null)" ]; then
+                        cp -f "$bf" "$DOTFILES_DIR/bin/.local/bin/" 2>/dev/null || true
+                    fi
+                    ;;
+            esac
+        done
+        log "Синхронизированы пользовательские бинарники (~/.local/bin)"
+    fi
+
+    log "Синхронизация завершена успешно!"
+}
+
+cmd_diff() {
+    header "Различия в репозитории dotfiles"
+    git -C "$DOTFILES_DIR" diff
+}
+
+cmd_reload() {
+    header "Перезагрузка окружения"
+    
+    # 1. i3
+    if command -v i3-msg >/dev/null 2>&1; then
+        info "Перезагрузка i3..."
+        i3-msg reload >/dev/null 2>&1 || true
+        log "i3 перезагружен"
+    fi
+
+    # 2. Dunst
+    if command -v dunst >/dev/null 2>&1; then
+        info "Перезапуск Dunst..."
+        killall dunst 2>/dev/null || true
+        dunst -config "${HOME}/.cache/wal/dunstrc" >/dev/null 2>&1 &
+        log "Dunst перезапущен"
+    fi
+
+    # 3. EWW
+    if [ -f "$HOME/.config/eww/launch.sh" ]; then
+        info "Перезапуск панелей EWW..."
+        "$HOME/.config/eww/launch.sh" >/dev/null 2>&1 || true
+        log "EWW перезапущен"
+    fi
+
+    # 4. Xresources
+    if [ -f "$HOME/.Xresources" ] && command -v xrdb >/dev/null 2>&1; then
+        xrdb -merge "$HOME/.Xresources" 2>/dev/null || true
+        log "Xresources обновлен"
+    fi
+
+    # 5. Picom
+    if [ -f "$HOME/.config/i3/scripts/software/toggle-picom.sh" ]; then
+        if pgrep -x picom >/dev/null 2>&1; then
+            pkill -x picom 2>/dev/null || true
+            sleep 0.2
+            picom --config "$HOME/.config/picom/picom.conf" -b 2>/dev/null || true
+            log "Picom перезапущен"
+        fi
+    fi
+
+    log "Окружение полностью обновлено!"
+}
+
+cmd_check() {
+    header "Проверка синтаксиса и целостности конфигураций"
+    local errors=0
+
+    # 1. i3
+    if command -v i3 >/dev/null 2>&1; then
+        if i3 -C >/dev/null 2>&1; then
+            log "Конфиг i3: ${C_GREEN}Синтаксис корректен${C_RESET}"
+        else
+            warn "Конфиг i3: Ошибка синтаксиса (запустите 'i3 -C' для подробностей)"
+            errors=$((errors + 1))
+        fi
+    fi
+
+    # 2. Python скрипты в system-control-center
+    local py_files=(
+        "$HOME/.config/system-control-center/system_control_center.py"
+        "$HOME/.config/system-control-center/postinstall_wizard.py"
+    )
+    for pf in "${py_files[@]}"; do
+        if [ -f "$pf" ]; then
+            if python3 -m py_compile "$pf" 2>/dev/null; then
+                log "Python: ${C_GREEN}$(basename "$pf") валиден${C_RESET}"
+            else
+                warn "Python: Ошибка компиляции в $(basename "$pf")"
+                errors=$((errors + 1))
+            fi
+        fi
+    done
+
+    # 3. Shell скрипты
+    local sh_dirs=(
+        "$HOME/.config/i3/scripts/software"
+        "$HOME/.config/i3/scripts/hardware"
+        "$HOME/.config/eww/scripts"
+    )
+    for sdir in "${sh_dirs[@]}"; do
+        if [ -d "$sdir" ]; then
+            for sf in "$sdir"/*.sh; do
+                [ -f "$sf" ] || continue
+                if bash -n "$sf" 2>/dev/null; then
+                    :
+                else
+                    warn "Shell синтаксис: ошибка в $sf"
+                    errors=$((errors + 1))
+                fi
+            done
+        fi
+    done
+    log "Shell скрипты: ${C_GREEN}Все скрипты проверены${C_RESET}"
+
+    # 4. JSON валидация (fastfetch, rofi)
+    if [ -f "$HOME/.config/fastfetch/config.jsonc" ]; then
+        log "Fastfetch: ${C_GREEN}Конфиг присутствует${C_RESET}"
+    fi
+
+    if [ "$errors" -eq 0 ]; then
+        printf "\n${C_GREEN}${C_BOLD}[✓] Все проверки пройдены без ошибок! Система полностью здорова.${C_RESET}\n"
+    else
+        printf "\n${C_RED}${C_BOLD}[!] Обнаружено ошибок: %d${C_RESET}\n" "$errors"
+    fi
+}
+
+cmd_commit() {
+    cmd_sync
+    header "Фиксация изменений в Git"
+    local msg="${1:-"update: sync dotfiles from live system"}"
+    git -C "$DOTFILES_DIR" add -A
+    if git -C "$DOTFILES_DIR" diff --cached --quiet; then
+        log "Нет новых изменений для коммита."
+    else
+        git -C "$DOTFILES_DIR" commit -m "$msg"
+        log "Коммит создан: ${C_BOLD}$msg${C_RESET}"
+    fi
+}
+
+cmd_theme() {
+    if [ -n "${1:-}" ]; then
+        local target="$HOME/.config/themes/$1"
+        if [ -d "$target" ]; then
+            "$HOME/.config/i3/scripts/software/theme-apply.sh" "$target"
+        else
+            error "Тема '$1' не найдена в ~/.config/themes/"
+        fi
+    else
+        "$HOME/.config/i3/scripts/software/theme-select.sh"
+    fi
+}
+
+# Main routing
+case "${1:-}" in
+    status)  cmd_status ;;
+    sync)    cmd_sync ;;
+    diff)    cmd_diff ;;
+    reload)  cmd_reload ;;
+    check)   cmd_check ;;
+    commit)  shift; cmd_commit "$*" ;;
+    theme)   shift; cmd_theme "$*" ;;
+    help|--help|-h|"")
+        if [ -z "${1:-}" ]; then
+            cmd_status
+        else
+            show_help
+        fi
+        ;;
+    *)
+        show_help
+        error "Неизвестная команда: $1"
+        ;;
+esac

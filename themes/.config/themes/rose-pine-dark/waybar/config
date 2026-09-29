@@ -1,0 +1,153 @@
+{
+  "position": "bottom",
+  "spacing": 0,
+  "height": 35,
+  "modules-left": [
+    "custom/weather",
+    "sway/workspaces",
+    "mpris",
+    "sway/mode"
+  ],
+  "modules-center": [
+    "clock"
+  ],
+  "modules-right": [
+    "tray",
+    "network",
+    "pulseaudio",
+    "custom/battery",
+    "battery",
+    "cpu",
+    "memory",
+    "bluetooth",
+    "sway/language",
+    "custom/swaync"
+  ],
+  "sway/workspaces": {
+    "format": "{icon}",
+    "format-icons": {
+      "1": "",
+      "2": "",
+      "3": "",
+      "4": "",
+      "5": "",
+      "focused": ""
+    }
+  },
+  "sway/mode": {
+    "format": "<span foreground='#eb6f92'> </span>{}"
+  },
+  "backlight": {
+    "interval": 2,
+    "format": "",
+    "tooltip-format": "Backlight {percent}%",
+    "smooth-scrolling-threshold": 1,
+    "on-scroll-up": "brightnessctl set +5% && notify-send \"Brightness set to $(brightnessctl | grep -oP '\\d+(?=%)')%\"",
+    "on-scroll-down": "brightnessctl set 5%- && notify-send \"Brightness set to $(brightnessctl | grep -oP '\\d+(?=%)')%\""
+  },
+  "bluetooth": {
+    "format": "",
+    "format-disabled": "",
+    "format-connected": "",
+    "tooltip-format": "Devices connected: {num_connections}",
+    "on-click": "blueman-manager"
+  },
+  "battery": {
+    "states": {
+      "great": 95,
+      "warning": 25,
+      "low": 15
+    },
+    "format": "<span foreground='#ebbcba'>{icon}</span> {capacity}%",
+    "format-charging": "<span foreground='#ebbcba'>{icon}</span> {capacity}%",
+    "interval": 5,
+    "format-icons": [
+      " ",
+      " ",
+      " ",
+      " ",
+      " "
+    ]
+  },
+  "tray": {
+    "spacing": 8,
+    "icon-size": 12
+  },
+  "clock": {
+    "format": "<span foreground='#eb6f92'> </span>{:%a %d, %I:%M %p}",
+    "tooltip": true,
+    "tooltip-format": "{calendar}"
+  },
+  "cpu": {
+    "format": "<span foreground='#9ccfd8'> </span>{usage}%",
+    "interval": 2,
+    "on-click": "alacritty -e htop"
+  },
+  "memory": {
+    "format": "<span foreground='#eb6f92'> </span>{percentage}%",
+    "interval": 2,
+    "on-click": "alacritty -e htop"
+  },
+  "network": {
+    "format-wifi": "<span foreground='#c4a7e7'> </span> {signalStrength}%",
+    "format-ethernet": "<span foreground='#c4a7e7'> </span> {signalStrength}%",
+    "format-linked": "No IP",
+    "format-disconnected": " ",
+    "on-click": "alacritty --title nmtui -e nmtui"
+  },
+  "pulseaudio": {
+    "format": "<span foreground='#f6c177'>{icon} </span>{volume}%",
+    "format-muted": " {volume}%",
+    "format-bluetooth": "{icon} {volume}%",
+    "on-click": "alacritty --title pulsemixer -e pulsemixer",
+    "format-icons": [
+      " ",
+      " ",
+      " "
+    ]
+  },
+  "custom/weather": {
+    "format": "{}°",
+    "tooltip": true,
+    "interval": 3600,
+    "exec": "wttrbar",
+    "return-type": "json"
+  },
+  "custom/swaync": {
+    "tooltip": false,
+    "format": "{icon}",
+    "format-icons": {
+      "notification": " <span foreground='#191724'>●</span>",
+      "none": "",
+      "dnd-notification": " <span foreground='#191724'>●</span>",
+      "dnd-none": "",
+      "inhibited-notification": " <span foreground='#191724'>●</span>",
+      "inhibited-none": "",
+      "dnd-inhibited-notification": " <span foreground='#191724'>●</span>",
+      "dnd-inhibited-none": ""
+    },
+    "return-type": "json",
+    "exec-if": "which swaync-client",
+    "exec": "swaync-client -swb",
+    "on-click": "swaync-client -t -sw",
+    "on-click-right": "swaync-client -d -sw",
+    "escape": true
+  },
+  "sway/language": {
+    "on-click": "swaymsg input type:keyboard xkb_switch_layout next",
+    "format": "{}",
+    "tooltip": false
+  },
+  "mpris": {
+    "format": "{player_icon} {dynamic}",
+    "format-paused": "{status_icon} {dynamic}",
+    "tooltip": false,
+    "player-icons": {
+      "default": "<span color='#eb6f92'> </span>"
+    },
+    "status-icons": {
+      "paused": "<span color='#eb6f92'> </span>"
+    },
+    "dynamic-len": 14
+  }
+}

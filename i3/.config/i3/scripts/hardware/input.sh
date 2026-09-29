@@ -25,7 +25,7 @@ fi
 if [ -f "$HOME/.config/system-control-center/apply-input-settings.sh" ]; then
     "$HOME/.config/system-control-center/apply-input-settings.sh" 2>/dev/null || true
 elif command -v setxkbmap >/dev/null 2>&1; then
-    setxkbmap -layout "us,ru" -option "grp:win_space_toggle" 2>/dev/null || true
+    setxkbmap -option '' -layout "us,ru" -option "grp:win_space_toggle" 2>/dev/null || true
 fi
 
 # 3. Отключение акселерации мыши (Flat Profile / Raw Input 1:1 для точного прицеливания)

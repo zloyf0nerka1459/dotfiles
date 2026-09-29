@@ -1,0 +1,25 @@
+image=~/.config/sway/themes/everforest-dark/swaylock/swaylock-image-everforest-dark.png
+font=JetBrains Mono
+font-size=11
+bs-hl-color=a7c080
+inside-color=232a2e
+inside-clear-color=232a2e
+inside-ver-color=232a2e
+inside-wrong-color=232a2e
+key-hl-color=a7c080
+line-color=2d353b
+line-clear-color=2d353b
+line-ver-color=2d353b
+line-wrong-color=2d353b
+ring-color=2d353b
+ring-clear-color=e69875
+ring-ver-color=7fbbb3
+ring-wrong-color=e67e80
+separator-color=a7c080
+text-color=d3c6aa
+text-clear-color=d3c6aa
+text-ver-color=d3c6aa
+text-wrong-color=d3c6aa
+layout-bg-color=00000000
+layout-text-color=d3c6aa
+ignore-empty-password

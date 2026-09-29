@@ -1,0 +1,109 @@
+{
+  "$schema": "https://github.com/fastfetch-cli/fastfetch/raw/dev/doc/json_schema.json",
+  "logo": {
+    "source": "~/.config/fastfetch/ascii.ansi",
+    "color": {
+      "1": "#ebcb8b",
+      "2": "#81a1c1"
+    },
+    "padding": {
+      "top": 1
+    }
+  },
+  "display": {
+    "separator": " ✢ "
+  },
+  "modules": [
+    "break",
+    "title",
+    {
+      "type": "colors",
+      "symbol": "circle"
+    },
+    {
+      "type": "custom",
+      "format": "\u001b[90m┏━━━━━━━━━━━━┓"
+    },
+    {
+      "type": "os",
+      "key": "┇  OS       ┇",
+      "keyColor": "#81a1c1"
+    },
+    {
+      "type": "kernel",
+      "key": "┇  Kernel   ┇",
+      "keyColor": "#81a1c1"
+    },
+    {
+      "type": "uptime",
+      "key": "┇  Uptime   ┇",
+      "keyColor": "#81a1c1"
+    },
+    {
+      "type": "packages",
+      "key": "┇  Packages ┇",
+      "keyColor": "#81a1c1"
+    },
+    {
+      "type": "shell",
+      "key": "┇  Shell    ┇",
+      "keyColor": "#81a1c1"
+    },
+    {
+      "type": "custom",
+      "format": "\u001b[90m┣━━━━━━━━━━━━┫"
+    },
+    {
+      "type": "wm",
+      "key": "┇  WM       ┇",
+      "keyColor": "#88c0d0"
+    },
+    {
+      "type": "terminal",
+      "key": "┇  Terminal ┇",
+      "keyColor": "#88c0d0"
+    },
+    {
+      "type": "font",
+      "key": "┇  Font     ┇",
+      "keyColor": "#88c0d0"
+    },
+    {
+      "type": "custom",
+      "format": "\u001b[90m┣━━━━━━━━━━━━┫"
+    },
+    {
+      "type": "cpu",
+      "key": "┇  CPU      ┇",
+      "keyColor": "#8fbcbb"
+    },
+    {
+      "type": "gpu",
+      "key": "┇  GPU      ┇",
+      "keyColor": "#8fbcbb"
+    },
+    {
+      "type": "custom",
+      "format": "\u001b[90m┣━━━━━━━━━━━━┫"
+    },
+    {
+      "type": "memory",
+      "key": "┇  Memory   ┇",
+      "keyColor": "#ebcb8b"
+    },
+    {
+      "type": "swap",
+      "key": "┇  Swap     ┇",
+      "keyColor": "#ebcb8b"
+    },
+    {
+      "type": "disk",
+      "key": "┇  Disk     ┇",
+      "keyColor": "#ebcb8b"
+    },
+    {
+      "type": "custom",
+      "format": "\u001b[90m┗━━━━━━━━━━━━┛"
+    }
+  ]
+}

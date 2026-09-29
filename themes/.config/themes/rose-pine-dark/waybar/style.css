@@ -1,0 +1,201 @@
+* {
+  font-family: JetBrains Mono;
+  font-size: 11px;
+}
+
+@define-color base #191724;
+@define-color overlay #26233a;
+@define-color text #e0def4;
+@define-color highlight-med #403d52;
+@define-color highlight-high #524f67;
+@define-color love #eb6f92;
+@define-color iris #c4a7e7;
+@define-color foam #9ccfd8;
+@define-color gold #f6c177;
+@define-color rose #ebbcba;
+
+window#waybar {
+  background: @base;
+  color: @text;
+}
+
+window#waybar.hidden {
+  opacity: 0.2;
+}
+
+button {
+  border: none;
+  border-radius: 0;
+}
+
+#cpu,
+#memory,
+#network,
+#pulseaudio {
+  background: transparent;
+  color: @text;
+  padding: 0px 8px;
+}
+
+#workspaces button,
+#language,
+#custom-swaync,
+#backlight,
+#bluetooth {
+  color: @base;
+}
+
+#mode,
+#cpu,
+#memory,
+#network,
+#pulseaudio,
+#language,
+#custom-swaync,
+#clock,
+#custom-weather,
+#tray,
+#backlight,
+#bluetooth,
+#battery,
+#mpris {
+  border-radius: 6px;
+}
+
+#cpu,
+#network,
+#pulseaudio,
+#battery,
+#mode {
+  margin: 4px 0px;
+}
+
+#memory,
+#bluetooth,
+#language,
+#custom-swaync,
+#tray,
+#mpris,
+#clock {
+  margin: 4px 6px 4px 0px;
+}
+
+#workspaces button,
+#custom-weather,
+#backlight {
+  margin: 4px 0px 4px 6px;
+}
+
+#window {
+  margin: 0px 6px;
+}
+
+#clock {
+  margin: 4px 6px;
+  padding: 0px 8px;
+  background: @overlay;
+  color: @text;
+}
+
+#workspaces button {
+  padding: 0px;
+  min-width: 28px;
+  border-radius: 6px;
+  font-weight: bold;
+  color: @highlight-med;
+}
+#workspaces button.focused {
+  background: @love;
+  color: @base;
+}
+#workspaces button.focused:hover {
+  background: @rose;
+}
+#workspaces button.urgent {
+  background: @iris;
+}
+
+#workspaces button:hover,
+#custom-swaync:hover,
+#cpu:hover,
+#memory:hover,
+#network:hover,
+#pulseaudio:hover,
+#mpris:hover,
+#battery:hover {
+  background: @overlay;
+}
+
+#tray:hover,
+#mode:hover {
+  background: @highlight-med;
+}
+
+#backlight:hover,
+#bluetooth:hover,
+#language:hover,
+#custom-swaync:hover {
+  background: @highlight-high;
+  color: @text;
+}
+
+#mode {
+  padding: 0px 8px;
+  background: @overlay;
+  color: @text;
+}
+
+#language,
+#custom-swaync {
+  padding: 0px 8px;
+  font-weight: bold;
+}
+#language {
+  background: @iris;
+}
+#custom-swaync {
+  min-width: 14px;
+  background: @love;
+}
+
+#tray,
+#mpris,
+#custom-weather,
+#backlight,
+#bluetooth,
+#battery {
+  padding: 0px 8px;
+}
+
+#custom-weather {
+  background: @overlay;
+}
+
+#network.disconnected,
+#pulseaudio.muted {
+  color: @love;
+}
+
+#tray {
+  box-shadow: none;
+  background: @overlay;
+}
+#tray > .needs-attention {
+  -gtk-icon-effect: highlight;
+}
+
+#backlight {
+  background: @gold;
+}
+
+#bluetooth {
+  background: @foam;
+}
+#bluetooth.disabled {
+  background: @rose;
+}
+
+#battery {
+  background: transparent;
+  color: @text;
+}

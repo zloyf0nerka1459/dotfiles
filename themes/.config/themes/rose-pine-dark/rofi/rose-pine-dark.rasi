@@ -1,0 +1,78 @@
+configuration {
+    font:                       "JetBrains Mono 11";
+}
+
+* {
+    surface:                    #1f1d2e;
+    highlight-med:              #403d52;
+    text:                       #e0def4;
+    iris:                       #c4a7e7;
+    background-color :          transparent;
+    text-color:                 @text;
+}
+
+window {
+    border:                     2px;
+    border-color:               @iris;
+    border-radius:              8px;
+    width:                      580px;
+    height:                     362px;
+    background-color:           @surface;
+}
+
+mainbox {
+    orientation:                horizontal;
+    spacing:                    0px;
+    children: 			[ "drunbox", "imagebox" ];
+}
+
+imagebox {
+    background-image: 		url("~/.config/sway/themes/rose-pine-dark/rofi/rofi-image-rose-pine-dark.png", height);
+    border: 			0 0 0 2px;
+    border-color: 		@iris;
+}
+
+drunbox {
+    orientation: 		vertical;
+    background-color: 		@surface;
+    children:			[ "inputbar", "listview" ];
+}
+
+inputbar {
+    orientation:                horizontal;
+    children:                   [ "entry" ];
+    padding:                    6px;
+    border:                     0 0 2px 0;
+    border-color:               @iris;
+    background-color:           @surface;
+}
+
+entry {
+    cursor:                     text;
+    placeholder:                "Search";
+}
+
+listview {
+    layout:                     vertical;
+    columns:                    1;
+}
+
+element {
+    margin:                     4px 6px;
+    padding:                    8px;
+    spacing:                    8px;
+}
+
+element selected {
+    border-radius:              6px;
+    background-color:           @highlight-med;
+}
+
+element-text {
+    vertical-align:             0.5;
+    horizontal-align:           0.0;
+}
+
+error-message {
+    padding: 6px;
+}

@@ -1,0 +1,131 @@
+{
+  "position": "left",
+  "spacing": 0,
+  "modules-left": [
+    "backlight",
+    "battery",
+    "sway/workspaces",
+    "custom/weather",
+    "sway/mode"
+  ],
+  "modules-center": [
+    "mpris",
+    "clock",
+    "custom/swaync"
+  ],
+  "modules-right": [
+    "tray",
+    "network",
+    "pulseaudio",
+    "bluetooth",
+    "sway/language"
+  ],
+  "sway/workspaces": {
+    "format": "{icon}",
+    "format-icons": {
+      "1": "",
+      "2": "",
+      "3": "",
+      "4": "",
+      "5": ""
+    }
+  },
+  "sway/mode": {
+    "format": "<span foreground='#ed8796'></span>"
+  },
+  "backlight": {
+    "interval": 2,
+    "format": "",
+    "tooltip-format": "Backlight {percent}%",
+    "smooth-scrolling-threshold": 1,
+    "on-scroll-up": "brightnessctl set +5% && notify-send \"Brightness set to $(brightnessctl | grep -oP '\\d+(?=%)')%\"",
+    "on-scroll-down": "brightnessctl set 5%- && notify-send \"Brightness set to $(brightnessctl | grep -oP '\\d+(?=%)')%\""
+  },
+  "bluetooth": {
+    "format": "",
+    "format-disabled": "",
+    "format-connected": "",
+    "tooltip-format": "Devices connected: {num_connections}",
+    "on-click": "blueman-manager"
+  },
+  "battery": {
+    "states": {
+      "great": 95,
+      "warning": 25,
+      "low": 15
+    },
+    "format": "{capacity}",
+    "format-charging": "{capacity}",
+    "interval": 5
+  },
+  "tray": {
+    "spacing": 8,
+    "icon-size": 12
+  },
+  "clock": {
+    "format": "{:%H\n%M}",
+    "tooltip": true,
+    "tooltip-format": "{calendar}"
+  },
+  "network": {
+    "format-wifi": " ",
+    "format-ethernet": " ",
+    "format-linked": "No\nIP",
+    "format-disconnected": " ",
+    "on-click": "alacritty --title nmtui -e nmtui"
+  },
+  "pulseaudio": {
+    "format": "{icon}",
+    "format-muted": "",
+    "format-bluetooth": " {icon}",
+    "on-click": "alacritty --title pulsemixer -e pulsemixer",
+    "format-icons": [
+      " ",
+      " ",
+      " "
+    ]
+  },
+  "custom/weather": {
+    "format": "{}",
+    "tooltip": true,
+    "interval": 3600,
+    "exec": "wttrbar --vertical-view",
+    "return-type": "json"
+  },
+  "custom/swaync": {
+    "tooltip": false,
+    "format": "{icon}",
+    "format-icons": {
+      "notification": " <span foreground='#ed8796'>●</span>",
+      "none": "",
+      "dnd-notification": " <span foreground='#ed8796'>●</span>",
+      "dnd-none": "",
+      "inhibited-notification": " <span foreground='#ed8796'>●</span>",
+      "inhibited-none": "",
+      "dnd-inhibited-notification": " <span foreground='#ed8796'>●</span>",
+      "dnd-inhibited-none": ""
+    },
+    "return-type": "json",
+    "exec-if": "which swaync-client",
+    "exec": "swaync-client -swb",
+    "on-click": "swaync-client -t -sw",
+    "on-click-right": "swaync-client -d -sw",
+    "escape": true
+  },
+  "sway/language": {
+    "on-click": "swaymsg input type:keyboard xkb_switch_layout next",
+    "format": "{}",
+    "tooltip": false
+  },
+  "mpris": {
+    "format": "{player_icon}",
+    "format-paused": "{status_icon}",
+    "tooltip": false,
+    "player-icons": {
+      "default": "<span color='#8aadf4'> </span>"
+    },
+    "status-icons": {
+      "paused": "<span color='#8aadf4'> </span>"
+    },
+  }
+}

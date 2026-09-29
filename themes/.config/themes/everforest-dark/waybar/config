@@ -1,0 +1,151 @@
+{
+  "position": "top",
+  "spacing": 0,
+  "modules-left": [
+    "backlight",
+    "battery",
+    "clock",
+    "custom/weather",
+    "sway/mode",
+    "mpris"
+  ],
+  "modules-center": [
+    "sway/workspaces"
+  ],
+  "modules-right": [
+    "tray",
+    "pulseaudio",
+    "network",
+    "cpu",
+    "memory",
+    "bluetooth",
+    "sway/language",
+    "custom/swaync"
+  ],
+  "sway/workspaces": {
+    "format": "{icon}",
+    "format-icons": {
+      "1": "",
+      "2": "",
+      "3": "",
+      "4": "",
+      "5": ""
+    }
+  },
+  "sway/mode": {
+    "format": "<span foreground='#e67e80'> </span>{}"
+  },
+  "backlight": {
+    "interval": 2,
+    "format": "",
+    "tooltip-format": "Backlight {percent}%",
+    "smooth-scrolling-threshold": 1,
+    "on-scroll-up": "brightnessctl set +5% && notify-send \"Brightness set to $(brightnessctl | grep -oP '\\d+(?=%)')%\"",
+    "on-scroll-down": "brightnessctl set 5%- && notify-send \"Brightness set to $(brightnessctl | grep -oP '\\d+(?=%)')%\""
+  },
+  "bluetooth": {
+    "format": "",
+    "format-disabled": "",
+    "format-connected": "",
+    "tooltip-format": "Devices connected: {num_connections}",
+    "on-click": "blueman-manager"
+  },
+  "battery": {
+    "states": {
+      "great": 95,
+      "warning": 25,
+      "low": 15
+    },
+    "format": "{icon} {capacity}%",
+    "format-charging": "{icon} {capacity}%",
+    "interval": 5,
+    "format-icons": [
+      " ",
+      " ",
+      " ",
+      " ",
+      " "
+    ]
+  },
+  "tray": {
+    "spacing": 8,
+    "icon-size": 12
+  },
+  "clock": {
+    "format": "<span foreground='#a7c080'> </span>{:%a %d, %I:%M %p}",
+    "tooltip": true,
+    "tooltip-format": "{calendar}"
+  },
+  "cpu": {
+    "format": "<span foreground='#9da9a0'> </span>{usage}%",
+    "interval": 2,
+    "on-click": "alacritty -e htop"
+  },
+  "memory": {
+    "format": "<span foreground='#dbbc7f'> </span>{percentage}%",
+    "interval": 2,
+    "on-click": "alacritty -e htop"
+  },
+  "network": {
+    "format-wifi": "<span foreground='#d699b6'> </span> {signalStrength}%",
+    "format-ethernet": "<span foreground='#d699b6'> </span> {signalStrength}%",
+    "format-linked": "No IP",
+    "format-disconnected": " ",
+    "on-click": "alacritty --title nmtui -e nmtui"
+  },
+  "pulseaudio": {
+    "format": "{icon} {volume}%",
+    "format-muted": " {volume}%",
+    "format-bluetooth": "{icon} {volume}%",
+    "on-click": "alacritty --title pulsemixer -e pulsemixer",
+    "format-icons": [
+      "<span foreground='#e69875'> </span>",
+      "<span foreground='#e69875'> </span>",
+      "<span foreground='#e69875'> </span>"
+    ]
+  },
+  "custom/weather": {
+    "format": "{}°",
+    "tooltip": true,
+    "interval": 3600,
+    "exec": "wttrbar",
+    "return-type": "json"
+  },
+  "custom/swaync": {
+    "tooltip": false,
+    "format": "{icon}",
+    "format-icons": {
+      "notification": " <span foreground='#e67e80'>●</span>",
+      "none": "",
+      "dnd-notification": " <span foreground='#e67e80'>●</span>",
+      "dnd-none": "",
+      "inhibited-notification": " <span foreground='#e67e80'>●</span>",
+      "inhibited-none": "",
+      "dnd-inhibited-notification": " <span foreground='#e67e80'>●</span>",
+      "dnd-inhibited-none": ""
+    },
+    "return-type": "json",
+    "exec-if": "which swaync-client",
+    "exec": "swaync-client -swb",
+    "on-click": "swaync-client -t -sw",
+    "on-click-right": "swaync-client -d -sw",
+    "escape": true
+  },
+  "sway/language": {
+    "on-click": "swaymsg input type:keyboard xkb_switch_layout next",
+    "format": "{}",
+    "tooltip": false
+  },
+  "mpris": {
+    "format": "{player_icon} {dynamic}",
+    "format-paused": "{status_icon} {dynamic}",
+    "tooltip": false,
+    "player-icons": {
+      "default": "<span color='#7fbbb3'> </span> <span color='#9da9a0'></span>"
+    },
+    "status-icons": {
+      "paused": "<span color='#7fbbb3'> </span> <span color='#9da9a0'></span>"
+    },
+    "dynamic-len": 14
+  }
+}

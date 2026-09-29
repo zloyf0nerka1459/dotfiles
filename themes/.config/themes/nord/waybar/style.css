@@ -1,0 +1,172 @@
+* {
+  font-family: JetBrains Mono;
+  font-size: 11px;
+}
+
+@define-color nord0 #2e3440;
+@define-color nord2 #434c5e;
+@define-color nord3 #4c566a;
+@define-color nord6 #eceff4;
+@define-color nord8 #88c0d0;
+@define-color nord9 #81a1c1;
+@define-color nord10 #5e81ac;
+@define-color nord11 #bf616a;
+@define-color nord13 #ebcb8b;
+
+window#waybar {
+  background: @nord0;
+  color: @nord6;
+  border: 2px solid @nord3;
+}
+
+window#waybar.hidden {
+  opacity: 0.2;
+}
+
+button {
+  border: none;
+  border-radius: 0;
+}
+
+#cpu,
+#memory,
+#network,
+#pulseaudio,
+#battery {
+  margin: 4px 0px;
+  padding: 0px 8px;
+  background: transparent;
+  color: @nord6;
+}
+
+#tray,
+#mpris,
+#custom-weather,
+#backlight,
+#bluetooth {
+  padding: 0px 8px;
+}
+
+#mode,
+#language,
+#custom-swaync,
+#clock,
+#tray,
+#mpris,
+#custom-weather,
+#backlight,
+#cpu,
+#memory,
+#network,
+#pulseaudio,
+#bluetooth,
+#battery {
+  border-radius: 6px;
+}
+
+#mpris,
+#tray,
+#workspaces button {
+  margin: 4px 0px 4px 6px;
+}
+
+#custom-weather,
+#mode,
+#language,
+#custom-swaync {
+  margin: 4px 0px;
+}
+
+#clock {
+  margin: 4px 6px 4px 0px;
+}
+
+#bluetooth {
+  margin: 4px 6px 4px 0px;
+}
+
+#backlight,
+
+#memory {
+  margin: 4px 0px 4px;
+}
+
+#window {
+  margin: 0px 6px;
+}
+
+#workspaces button {
+  padding: 0px;
+  min-width: 28px;
+  color: @nord6;
+}
+
+#workspaces button.focused {
+  border-top: 1px solid @nord9;
+  color: @nord10;
+}
+
+#workspaces button.urgent {
+  background: @nord11;
+}
+
+#workspaces button:hover,
+#custom-swaync:hover,
+#language:hover,
+#backlight:hover,
+#cpu:hover,
+#memory:hover,
+#network:hover,
+#pulseaudio:hover,
+#mpris:hover,
+#battery:hover,
+#bluetooth:hover,
+#tray:hover,
+#mode:hover {
+  background: @nord2;
+}
+
+#clock {
+  padding: 0px 8px;
+  color: @nord9;
+}
+
+#mode {
+  padding: 0px 8px;
+  color: @nord6;
+}
+
+#language {
+  padding: 0px 8px;
+  color: @nord9;
+}
+
+#custom-swaync {
+  padding: 0px 8px;
+  min-width: 14px;
+  font-weight: bold;
+  color: @nord9;
+}
+
+#custom-weather {
+  color: @nord13;
+}
+
+#bluetooth {
+  color: @nord8;
+}
+#bluetooth.disabled {
+  color: @nord11;
+}
+
+#network.disconnected,
+#pulseaudio.muted {
+  color: @nord11;
+}
+
+#tray {
+  box-shadow: none;
+}
+#tray > .needs-attention {
+  -gtk-icon-effect: highlight;
+}

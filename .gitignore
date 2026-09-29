@@ -2,6 +2,8 @@
 current.theme
 *.bak*
 *.save*
+*_backup*
+*~
 *.log
 __pycache__/
 *.pyc

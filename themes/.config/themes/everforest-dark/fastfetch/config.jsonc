@@ -1,0 +1,113 @@
+{
+  "$schema": "https://github.com/fastfetch-cli/fastfetch/raw/dev/doc/json_schema.json",
+  "logo": {
+    "source": "~/.config/fastfetch/ascii.ansi",
+    "color": {
+      "1": "#a7c080",
+      "2": "#e69875",
+      "3": "#7fbbb3"
+    }
+  },
+  "display": {
+    "separator": " ~ "
+  },
+  "modules": [
+    "title",
+    "separator",
+    {
+      "type": "custom",
+      "format": "\u001b[90m╔════════════════════════════════════════════════════╗"
+    },
+    {
+      "type": "os",
+      "key": "╠  OS",
+      "keyColor": "#a7c080"
+    },
+    {
+      "type": "kernel",
+      "key": "╠   Kernel",
+      "keyColor": "#a7c080"
+    },
+    {
+      "type": "uptime",
+      "key": "╠   Uptime ",
+      "keyColor": "#a7c080"
+    },
+    {
+      "type": "packages",
+      "key": "╠   Packages",
+      "keyColor": "#a7c080"
+    },
+    {
+      "type": "shell",
+      "key": "╠   Shell",
+      "keyColor": "#a7c080"
+    },
+    {
+      "type": "custom",
+      "format": "\u001b[90m╚════════════════════════════════════════════════════╝"
+    },
+    {
+      "type": "custom",
+      "format": "\u001b[90m╔════════════════════════════════════════════════════╗"
+    },
+    {
+      "type": "wm",
+      "key": "╠  WM",
+      "keyColor": "#7fbbb3"
+    },
+    {
+      "type": "terminal",
+      "key": "╠   Terminal",
+      "keyColor": "#7fbbb3"
+    },
+    {
+      "type": "font",
+      "key": "╠   Font",
+      "keyColor": "#7fbbb3"
+    },
+    {
+      "type": "custom",
+      "format": "\u001b[90m╚════════════════════════════════════════════════════╝"
+    },
+    {
+      "type": "custom",
+      "format": "\u001b[90m╔════════════════════════════════════════════════════╗"
+    },
+    {
+      "type": "host",
+      "key": "╠   PC",
+      "keyColor": "#e69875"
+    },
+    {
+      "type": "cpu",
+      "key": "╠   CPU",
+      "keyColor": "#e69875"
+    },
+    {
+      "type": "gpu",
+      "key": "╠   GPU",
+      "keyColor": "#e69875"
+    },
+    {
+      "type": "memory",
+      "key": "╠   Memory",
+      "keyColor": "#e69875"
+    },
+    {
+      "type": "swap",
+      "key": "╠   Swap",
+      "keyColor": "#e69875"
+    },
+    {
+      "type": "disk",
+      "key": "╠   Disk",
+      "keyColor": "#e69875"
+    },
+    {
+      "type": "custom",
+      "format": "\u001b[90m╚════════════════════════════════════════════════════╝"
+    }
+  ]
+}
+

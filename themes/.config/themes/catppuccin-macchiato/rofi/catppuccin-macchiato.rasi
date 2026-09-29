@@ -1,0 +1,78 @@
+configuration {
+    font:                       "JetBrains Mono 11";
+}
+
+* {
+    base:                       #24273a;
+    surface-1:                  #494d64;
+    text:                       #cad3f5;
+    lavender:                   #b7bdf8;
+    background-color :          transparent;
+    text-color:                 @text;
+}
+
+window {
+    border:                     2px;
+    border-color:               @lavender;
+    border-radius:              8px;
+    width:                      580px;
+    height:                     362px;
+    background-color:           @base;
+}
+
+mainbox {
+    orientation:                horizontal;
+    spacing:                    0px;
+    children: 			[ "imagebox", "drunbox" ];
+}
+
+imagebox {
+    background-image: 		url("~/.config/sway/themes/catppuccin-macchiato/rofi/rofi-image-catppuccin-macchiato.png", height);
+    border: 			0 2px 0 0;
+    border-color: 		@lavender;
+}
+
+drunbox {
+    orientation: 		vertical;
+    background-color: 		@base;
+    children:			[ "inputbar", "listview" ];
+}
+
+inputbar {
+    orientation:                horizontal;
+    children:                   [ "entry" ];
+    padding:                    6px;
+    border:                     0 0 2px 0;
+    border-color:               @lavender;
+    background-color:           @base;
+}
+
+entry {
+    cursor:                     text;
+    placeholder:                "Search";
+}
+
+listview {
+    layout:                     vertical;
+    columns:                    1;
+}
+
+element {
+    margin:                     4px 6px;
+    padding:                    8px;
+    spacing:                    8px;
+}
+
+element selected {
+    border-radius:              6px;
+    background-color:           @surface-1;
+}
+
+element-text {
+    vertical-align:             0.5;
+    horizontal-align:           0.0;
+}
+
+error-message {
+    padding: 6px;
+}

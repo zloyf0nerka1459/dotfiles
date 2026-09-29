@@ -1,0 +1,173 @@
+{
+  "position": "top",
+  "spacing": 0,
+  "modules-left": [
+    "custom/batteryicon",
+    "backlight",
+    "battery",
+    "sway/workspaces",
+    "sway/mode",
+    "mpris"
+  ],
+  "modules-center": [
+    "sway/language",
+    "clock",
+    "custom/weather",
+    "custom/swaync"
+  ],
+  "modules-right": [
+    "tray",
+    "custom/pulseaudioicon",
+    "pulseaudio",
+    "custom/networkicon",
+    "network",
+    "custom/cpuicon",
+    "cpu",
+    "custom/memoryicon",
+    "memory",
+    "bluetooth"
+  ],
+  "sway/workspaces": {
+    "format": "{icon}",
+    "format-icons": {
+      "1": "FM1",
+      "2": "FM2",
+      "3": "FM3",
+      "4": "FM4",
+      "5": "FM5"
+    }
+  },
+  "sway/mode": {
+    "format": " {}"
+  },
+  "backlight": {
+    "interval": 2,
+    "format": "",
+    "tooltip-format": "Backlight {percent}%",
+    "smooth-scrolling-threshold": 1,
+    "on-scroll-up": "brightnessctl set +5% && notify-send \"Brightness set to $(brightnessctl | grep -oP '\\d+(?=%)')%\"",
+    "on-scroll-down": "brightnessctl set 5%- && notify-send \"Brightness set to $(brightnessctl | grep -oP '\\d+(?=%)')%\""
+  },
+  "bluetooth": {
+    "format": "",
+    "format-disabled": "",
+    "format-connected": "",
+    "tooltip-format": "Devices connected: {num_connections}",
+    "on-click": "blueman-manager"
+  },
+  "battery": {
+    "states": {
+      "great": 95,
+      "warning": 25,
+      "low": 15
+    },
+    "format": "{capacity}%",
+    "format-charging": "{capacity}%",
+    "interval": 5
+  },
+  "custom/batteryicon": {
+    "exec": "~/.config/waybar/scripts/battery-icon.sh",
+    "format": "",
+    "interval": 5
+  },
+  "tray": {
+    "spacing": 8,
+    "icon-size": 12
+  },
+  "clock": {
+    "format": " {:%a %d, %I:%M %p}",
+    "tooltip": true,
+    "tooltip-format": "{calendar}"
+  },
+  "custom/cpuicon": {
+    "format": " "
+  },
+  "cpu": {
+    "format": "{usage}%",
+    "interval": 2,
+    "on-click": "alacritty -e htop"
+  },
+  "custom/memoryicon": {
+    "format": ""
+  },
+  "memory": {
+    "format": "{percentage}%",
+    "interval": 2,
+    "on-click": "alacritty -e htop"
+  },
+  "custom/networkicon": {
+    "format": ""
+  },
+  "network": {
+    "format-wifi": "{icon} {signalStrength}%",
+    "format-ethernet": "{icon} {signalStrength}%",
+    "format-linked": "No IP",
+    "format-disconnected": "Offline",
+    "on-click": "alacritty --title nmtui -e nmtui",
+    "format-icons": [
+      "⬡-⬡-⬡",
+      "<span foreground='#d3869b'>⬢</span>-⬡-⬡",
+      "⬢-<span foreground='#d3869b'>⬢</span>-⬡",
+      "⬢-⬢-<span foreground='#d3869b'>⬢</span>"
+    ]
+  },
+  "custom/pulseaudioicon": {
+    "format": ""
+  },
+  "pulseaudio": {
+    "format": "{icon} {volume}%",
+    "format-muted": "<span color='#e78a4e'>▓</span> {volume}%",
+    "format-bluetooth": "{icon} {volume}%",
+    "on-click": "alacritty --title pulsemixer -e pulsemixer",
+    "format-icons": [
+      "<span color='#e78a4e'>▓</span>",
+      "<span color='#e78a4e'>▓</span>",
+      "<span color='#e78a4e'>▓</span>",
+      "<span color='#e78a4e'>▓</span>"
+    ]
+  },
+  "custom/weather": {
+    "format": "{}°",
+    "tooltip": true,
+    "interval": 3600,
+    "exec": "wttrbar",
+    "return-type": "json"
+  },
+  "custom/swaync": {
+    "tooltip": false,
+    "format": "{icon}",
+    "format-icons": {
+      "notification": " <span foreground='#ea6962'>●</span>",
+      "none": "",
+      "dnd-notification": " <span foreground='#ea6962'>●</span>",
+      "dnd-none": "",
+      "inhibited-notification": " <span foreground='#ea6962'>●</span>",
+      "inhibited-none": "",
+      "dnd-inhibited-notification": " <span foreground='#ea6962'>●</span>",
+      "dnd-inhibited-none": ""
+    },
+    "return-type": "json",
+    "exec-if": "which swaync-client",
+    "exec": "swaync-client -swb",
+    "on-click": "swaync-client -t -sw",
+    "on-click-right": "swaync-client -d -sw",
+    "escape": true
+  },
+  "sway/language": {
+    "on-click": "swaymsg input type:keyboard xkb_switch_layout next",
+    "format": "{}",
+    "tooltip": false
+  },
+  "mpris": {
+    "format": "{player_icon} {dynamic}",
+    "format-paused": "{status_icon} {dynamic}",
+    "tooltip": false,
+    "player-icons": {
+      "default": "<span color='#ea6962'> </span> ┇ <span color='#e78a4e'></span>"
+    },
+    "status-icons": {
+      "paused": "<span color='#ea6962'> </span> ┇ <span color='#e78a4e'></span>"
+    },
+    "dynamic-len": 14
+  }
+}

@@ -1,0 +1,216 @@
+* {
+  font-family: JetBrains Mono;
+  font-size: 11px;
+}
+
+@define-color bg_dim #232a2e;
+@define-color bg1 #343f44;
+@define-color bg2 #3d484d;
+@define-color bg_yellow #4d4c43;
+@define-color bg_green #425047;
+@define-color fg #d3c6aa;
+@define-color grey1 #859289;
+@define-color orange #e69875;
+@define-color yellow #dbbc7f;
+@define-color red #e67e80;
+@define-color green #a7c080;
+@define-color aqua #83c092;
+@define-color blue #7fbbb3;
+@define-color purple #d699b6;
+
+window#waybar {
+  background: @bg_dim;
+  color: @fg;
+}
+
+window#waybar.hidden {
+  opacity: 0.2;
+}
+
+button {
+  border: none;
+  border-radius: 0;
+}
+
+#cpu,
+#memory,
+#network,
+#pulseaudio {
+  background: transparent;
+  color: @fg;
+  padding: 0px 8px;
+}
+
+#workspaces button,
+#language,
+#custom-swaync,
+#backlight,
+#bluetooth,
+#battery {
+  color: @bg_dim;
+}
+
+#mode,
+#cpu,
+#memory,
+#network,
+#pulseaudio,
+#language,
+#custom-swaync,
+#clock,
+#custom-weather,
+#tray,
+#backlight,
+#bluetooth,
+#battery,
+#mpris {
+  border-radius: 6px;
+}
+
+#cpu,
+#network,
+#pulseaudio,
+#battery {
+  margin: 4px 0px 4px 0px;
+}
+
+#memory,
+#bluetooth {
+  margin: 4px 6px 4px 0px;
+}
+
+#workspaces button {
+  margin: 4px 0px;
+  padding: 0px;
+  min-width: 28px;
+  font-weight: bold;
+  background: @bg1;
+}
+
+#workspaces button:first-child {
+  border-top-left-radius: 6px;
+  border-bottom-left-radius: 6px;
+}
+
+#workspaces button:last-child {
+  margin: 4px 0px;
+  border-top-right-radius: 6px;
+  border-bottom-right-radius: 6px;
+}
+
+#workspaces button:hover,
+#mode:hover,
+#custom-swaync:hover,
+#cpu:hover,
+#memory:hover,
+#network:hover,
+#pulseaudio:hover,
+#tray:hover,
+#mpris:hover {
+  background: @bg2;
+}
+
+#workspaces button.focused {
+  color: @green;
+}
+
+#workspaces button.urgent {
+  background: @red;
+}
+
+#mode {
+  margin: 4px 0px;
+  padding: 0px 8px;
+  border-color: @red;
+  background: @bg1;
+  color: @fg;
+}
+
+#language:hover,
+#custom-swaync:hover,
+#backlight:hover,
+#bluetooth:hover {
+  background: @grey1;
+}
+
+#language,
+#custom-swaync {
+  margin: 4px 6px 4px 0px;
+  padding: 0px 8px;
+  font-weight: bold;
+}
+
+#language {
+  background: @aqua;
+}
+
+#custom-swaync {
+  min-width: 14px;
+  background: @blue;
+}
+
+#tray,
+#mpris,
+#custom-weather {
+  margin: 4px 6px 4px 0px;
+  padding: 0px 8px;
+}
+
+#window,
+#workspaces {
+  margin: 0px 6px;
+}
+
+.modules-left > widget:first-child > #workspaces {
+  margin-left: 6px;
+}
+
+#clock {
+  margin: 4px 6px;
+  padding: 0px 8px;
+  background: @bg_green;
+  color: @fg;
+}
+
+#custom-weather {
+  background: @bg_yellow;
+}
+
+#network.disconnected,
+#pulseaudio.muted {
+  color: @red;
+}
+
+#tray {
+  box-shadow: none;
+  background: @bg1;
+}
+
+#tray > .needs-attention {
+  -gtk-icon-effect: highlight;
+  background: @red;
+}
+
+#backlight {
+  margin: 4px 6px;
+  padding: 0 8px;
+  background: @yellow;
+}
+
+#bluetooth {
+  padding: 0px 8px;
+  background: @orange;
+}
+
+#bluetooth.disabled {
+  background: @red;
+}
+
+#battery {
+  padding: 0 8px;
+  background: @green;
+}
+
+#mpris {
+  padding: 0 8px;
+}

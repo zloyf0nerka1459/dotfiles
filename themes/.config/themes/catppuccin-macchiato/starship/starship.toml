@@ -1,0 +1,88 @@
+"$schema" = 'https://starship.rs/config-schema.json'
+
+add_newline = false
+format = """
+[ ](fg:mauve)\
+$username\
+$directory\
+$git_branch\
+$git_status\
+$c\
+$golang\
+$haskell\
+$java\
+$nodejs\
+$rust\
+$python\
+$time\
+$line_break\
+[󱞪](fg:pink) \
+"""
+
+palette = "catppuccin-macchiato"
+
+[palettes.catppuccin-macchiato]
+text = '#cad3f5'
+flamingo = '#f0c6c6'
+mauve = '#c6a0f6'
+lavender = '#b7bdf8'
+pink = '#f5bde6'
+blue = '#8aadf4'
+
+[directory]
+style = "fg:blue"
+format = "[in](fg:text) [$path ]($style)"
+truncate_to_repo = false
+
+[directory.substitutions]
+Documents = "󰈙"
+Downloads = " "
+Music = " "
+Pictures = " "
+
+[git_branch]
+style = "fg:flamingo"
+format = "[on](fg:text) [$symbol$branch ]($style)"
+symbol = " "
+
+[git_status]
+style = "fg:flamingo"
+
+[time]
+style = "fg:pink"
+format = "[at](fg:text) [$time ]($style)"
+time_format = "%R 󰥔"
+disabled = false
+
+[username]
+style_user = "fg:mauve"
+format = "[$user ]($style)"
+show_always = true
+
+[c]
+style = "fg:lavender"
+symbol = " "
+
+[golang]
+style = "fg:lavender"
+symbol = " "
+
+[haskell]
+style = "fg:lavender"
+symbol = " "
+
+[java]
+style = "fg:lavender"
+symbol = " "
+
+[nodejs]
+style = "fg:lavender"
+symbol = "󰎙 "
+
+[python]
+style = "fg:lavender"
+symbol = ' '
+
+[rust]
+style = "fg:lavender"
+symbol = " "

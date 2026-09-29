@@ -1,0 +1,25 @@
+image=~/.config/sway/themes/gruvbox-material-dark/swaylock/swaylock-image-gruvbox-material-dark.png
+font=JetBrains Mono
+font-size=11
+bs-hl-color=e78a4e
+inside-color=1b1b1b
+inside-clear-color=1b1b1b
+inside-ver-color=1b1b1b
+inside-wrong-color=1b1b1b
+key-hl-color=e78a4e
+line-color=282828
+line-clear-color=282828
+line-ver-color=282828
+line-wrong-color=282828
+ring-color=282828
+ring-clear-color=d8a657
+ring-ver-color=7daea3
+ring-wrong-color=ea6962
+separator-color=e78a4e
+text-color=ddc7a1
+text-clear-color=ddc7a1
+text-ver-color=ddc7a1
+text-wrong-color=ddc7a1
+layout-bg-color=00000000
+layout-text-color=ddc7a1
+ignore-empty-password

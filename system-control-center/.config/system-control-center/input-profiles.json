@@ -1,0 +1,26 @@
+{
+  "devices": [
+    {
+      "name": "Compx VXE Mouse 1K Dongle",
+      "accel_profile": "adaptive",
+      "accel_speed": 0.0,
+      "natural_scrolling": false,
+      "left_handed": false,
+      "middle_emulation": false
+    },
+    {
+      "name": "Gaming Keyboard Mouse",
+      "accel_profile": "flat",
+      "accel_speed": 0.0,
+      "natural_scrolling": false,
+      "left_handed": false,
+      "middle_emulation": false
+    }
+  ],
+  "keyboard": {
+    "layouts": "us,ru",
+    "switch_option": "grp:win_space_toggle",
+    "repeat_delay": 280,
+    "repeat_rate": 40
+  }
+}

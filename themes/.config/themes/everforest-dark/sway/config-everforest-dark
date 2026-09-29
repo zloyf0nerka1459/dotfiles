@@ -1,0 +1,7 @@
+# Output & Appearance
+output * bg ~/.config/sway/wallpapers/wallpaper-everforest-dark.png fill
+
+client.focused          #a7c080 #a7c080 #232a2e #a7c080
+client.focused_inactive #a7c080 #a7c080 #232a2e #a7c080
+client.unfocused        #d3c6aa #d3c6aa #232a2e #d3c6aa
+client.urgent           #e67e80 #e67e80 #232a2e #e67e80

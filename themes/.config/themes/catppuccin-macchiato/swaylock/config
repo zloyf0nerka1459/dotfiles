@@ -1,0 +1,25 @@
+image=~/.config/sway/themes/catppuccin-macchiato/swaylock/swaylock-image-catppuccin-macchiato.png
+font=JetBrains Mono
+font-size=11
+bs-hl-color=c6a0f6
+inside-color=24273a
+inside-clear-color=24273a
+inside-ver-color=24273a
+inside-wrong-color=24273a
+key-hl-color=c6a0f6
+line-color=363a4f
+line-clear-color=363a4f
+line-ver-color=363a4f
+line-wrong-color=363a4f
+ring-color=363a4f
+ring-clear-color=f5a97f
+ring-ver-color=8aadf4
+ring-wrong-color=ed8796
+separator-color=c6a0f6
+text-color=cad3f5
+text-clear-color=cad3f5
+text-ver-color=cad3f5
+text-wrong-color=cad3f5
+layout-bg-color=00000000
+layout-text-color=cad3f5
+ignore-empty-password

@@ -1,0 +1,7 @@
+# Output & Appearance
+output * bg ~/.config/sway/wallpapers/wallpaper-rose-pine-dark.png fill
+
+client.focused          #c4a7e7 #c4a7e7 #24273a #c4a7e7
+client.focused_inactive #c4a7e7 #c4a7e7 #24273a #c4a7e7
+client.unfocused        #6e6a86 #6e6a86 #24273a #6e6a86
+client.urgent           #c4a7e7 #c4a7e7 #24273a #c4a7e7

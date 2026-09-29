@@ -1,0 +1,98 @@
+"$schema" = 'https://starship.rs/config-schema.json'
+
+add_newline = false
+format = """
+[░▒▓](overlay)\
+$username\
+$directory\
+$git_branch\
+$git_status\
+$c\
+$golang\
+$haskell\
+$java\
+$nodejs\
+$rust\
+$python\
+$time\
+[▓▒░](overlay)\
+$line_break\
+[ 󱞪](fg:iris) \
+"""
+
+palette = "rose-pine"
+
+[palettes.rose-pine]
+overlay = '#26233a'
+love = '#eb6f92'
+gold = '#f6c177'
+rose = '#ebbcba'
+pine = '#31748f'
+foam = '#9ccfd8'
+iris = '#c4a7e7'
+
+[directory]
+style = "bg:overlay fg:foam"
+format = "[ $path ]($style) "
+truncate_to_repo = false
+
+[directory.substitutions]
+Documents = "󰈙"
+Downloads = " "
+Music = " "
+Pictures = " "
+
+[git_branch]
+style = "bg:overlay fg:love"
+format = "[ $symbol $branch ]($style) "
+symbol = ""
+
+[git_status]
+style = "bg:overlay fg:love"
+format = '([ $all_status$ahead_behind ]($style)) '
+
+[time]
+style = "bg:overlay fg:rose"
+format = "[ $time ]($style)"
+time_format = "%R"
+disabled = false
+
+[username]
+style_user = "bg:overlay fg:iris"
+format = "[ $user ]($style) "
+show_always = true
+
+[c]
+style = "bg:overlay fg:gold"
+format = "[ $symbol$version ]($style) "
+symbol = " "
+
+[golang]
+style = "bg:overlay fg:gold"
+format = "[ $symbol$version ]($style) "
+symbol = " "
+
+[haskell]
+style = "bg:overlay fg:gold"
+format = "[ $symbol$version ]($style) "
+symbol = " "
+
+[java]
+style = "bg:overlay fg:gold"
+format = "[ $symbol$version ]($style) "
+symbol = " "
+
+[nodejs]
+style = "bg:overlay fg:gold"
+format = "[ $symbol$version ]($style) "
+symbol = "󰎙 "
+
+[python]
+style = "bg:overlay fg:gold"
+format = "[ $symbol$version ]($style) "
+symbol = ' '
+
+[rust]
+style = "bg:overlay fg:gold"
+format = "[ $symbol$version ]($style) "
+symbol = " "
