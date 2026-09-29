@@ -44,6 +44,9 @@ show_help() {
     printf "  ${C_GREEN}reload${C_RESET}         Мягко перезагрузить i3, EWW, Picom, Dunst и применить тему\n"
     printf "  ${C_GREEN}check${C_RESET}          Проверить синтаксис всех конфигов и скриптов на ошибки\n"
     printf "  ${C_GREEN}commit [msg]${C_RESET}   Синхронизировать и закоммитить изменения в git\n"
+    printf "  ${C_GREEN}backup${C_RESET}         Создать .tar.gz архив с бэкапом конфигураций в ~/backups/\n"
+    printf "  ${C_GREEN}push${C_RESET}           Отправить коммиты в удаленный репозиторий git (origin)\n"
+    printf "  ${C_GREEN}pull${C_RESET}           Получить обновления из git и перезагрузить окружение\n"
     printf "  ${C_GREEN}theme [name]${C_RESET}   Выбрать или переключить тему оформления\n"
     printf "  ${C_GREEN}help${C_RESET}           Показать эту справку\n\n"
 }
@@ -358,6 +361,50 @@ cmd_commit() {
     fi
 }
 
+cmd_backup() {
+    header "Создание резервной копии dotfiles"
+    local backup_dir="$HOME/backups"
+    mkdir -p "$backup_dir"
+    local ts
+    ts=$(date '+%Y%m%d_%H%M%S')
+    local archive="$backup_dir/dotfiles_backup_${ts}.tar.gz"
+    tar --exclude='.git' -czf "$archive" -C "$HOME" "dotfiles"
+    log "Архив успешно создан: ${C_BOLD}$archive${C_RESET} ($(du -h "$archive" | cut -f1))"
+}
+
+cmd_push() {
+    header "Отправка изменений в удаленный Git репозиторий"
+    local remote_url
+    remote_url=$(git -C "$DOTFILES_DIR" remote get-url origin 2>/dev/null || true)
+    if [ -z "$remote_url" ]; then
+        warn "Удаленный репозиторий (origin) еще не настроен."
+        info "Чтобы привязать GitHub / GitLab, выполните:"
+        printf "  ${C_CYAN}git -C ~/dotfiles remote add origin git@github.com:<username>/dotfiles.git${C_RESET}\n"
+        printf "  ${C_CYAN}dots push${C_RESET}\n\n"
+        return 0
+    fi
+    local branch
+    branch=$(git -C "$DOTFILES_DIR" branch --show-current 2>/dev/null || echo "master")
+    info "Отправка в $remote_url ($branch)..."
+    git -C "$DOTFILES_DIR" push -u origin "$branch"
+    log "Изменения успешно отправлены в $remote_url!"
+}
+
+cmd_pull() {
+    header "Получение обновлений из удаленного Git репозитория"
+    local remote_url
+    remote_url=$(git -C "$DOTFILES_DIR" remote get-url origin 2>/dev/null || true)
+    if [ -z "$remote_url" ]; then
+        warn "Удаленный репозиторий (origin) не настроен."
+        return 0
+    fi
+    local branch
+    branch=$(git -C "$DOTFILES_DIR" branch --show-current 2>/dev/null || echo "master")
+    git -C "$DOTFILES_DIR" pull origin "$branch"
+    log "Репозиторий обновлен. Перезагрузка окружения..."
+    cmd_reload
+}
+
 cmd_theme() {
     if [ -n "${1:-}" ]; then
         local target="$HOME/.config/themes/$1"
@@ -379,6 +426,9 @@ case "${1:-}" in
     reload)  cmd_reload ;;
     check)   cmd_check ;;
     commit)  shift; cmd_commit "$*" ;;
+    backup)  cmd_backup ;;
+    push)    cmd_push ;;
+    pull)    cmd_pull ;;
     theme)   shift; cmd_theme "$*" ;;
     help|--help|-h|"")
         if [ -z "${1:-}" ]; then

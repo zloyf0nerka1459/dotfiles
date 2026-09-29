@@ -249,7 +249,7 @@ alias b="btop"
 alias s='shutdown -P'
 
 # fastfetch / neofetch
-alias ff="fastfetch -c ~/.fastfetch_conf.jsonc"
+alias ff="fastfetch"
 alias nf="neofetch --disable gpu wm shell packages terminal wm_theme --cpu_speed off --cpu_cores off --distro_shorthand on --gtk2 off --gtk3 off --bold on --color_blocks off --colors 4 4 4 4 --ascii_distro arch_small --ascii_colors 4 7"
 
 # clear
