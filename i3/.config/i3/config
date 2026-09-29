@@ -94,6 +94,9 @@ bindsym $mod+t exec --no-startup-id ~/.config/i3/scripts/software/theme-select.s
 # Системные бинды
 bindsym $mod+Shift+c restart
 bindsym $mod+n exec dunstctl history-pop
+bindsym $mod+l exec --no-startup-id betterlockscreen -l blur
+bindsym $mod+Escape exec --no-startup-id ~/.config/i3/scripts/software/power-menu
+bindsym $mod+Shift+e exec --no-startup-id ~/.config/i3/scripts/software/power-menu
 
 # === 7. Мультимедиа (Звук) ===
 bindsym XF86AudioRaiseVolume exec pamixer -i 5
@@ -142,6 +145,7 @@ exec --no-startup-id ~/.config/i3/scripts/software/polkit-agent.sh
 # exec --no-startup-id greenclip daemon  # Отключено: используется CopyQ (биндится на $mod+c)
 exec --no-startup-id dunst
 exec --no-startup-id copyq
+exec --no-startup-id xss-lock --transfer-sleep-lock -- betterlockscreen -l blur
 exec_always --no-startup-id command -v spice-vdagent >/dev/null 2>&1 && pgrep -x spice-vdagent >/dev/null || spice-vdagent
 exec --no-startup-id nm-applet
 exec --no-startup-id ~/.config/i3/scripts/software/xdg-autostart.sh
