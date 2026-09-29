@@ -255,9 +255,13 @@ cmd_reload() {
     # 2. Dunst
     if command -v dunst >/dev/null 2>&1; then
         info "Перезапуск Dunst..."
-        killall dunst 2>/dev/null || true
-        sleep 0.1
-        nohup dunst >/dev/null 2>&1 &
+        if systemctl --user list-unit-files dunst.service >/dev/null 2>&1; then
+            systemctl --user restart dunst 2>/dev/null || true
+        else
+            killall dunst 2>/dev/null || true
+            sleep 0.1
+            nohup dunst >/dev/null 2>&1 &
+        fi
         log "Dunst перезапущен"
     fi
 
