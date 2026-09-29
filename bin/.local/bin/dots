@@ -257,7 +257,7 @@ cmd_reload() {
         info "Перезапуск Dunst..."
         killall dunst 2>/dev/null || true
         sleep 0.1
-        dunst >/dev/null 2>&1 &
+        nohup dunst >/dev/null 2>&1 &
         log "Dunst перезапущен"
     fi
 
