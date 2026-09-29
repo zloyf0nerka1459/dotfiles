@@ -243,6 +243,7 @@ cmd_diff() {
 
 cmd_reload() {
     header "Перезагрузка окружения"
+    export DISPLAY="${DISPLAY:-:0}"
     
     # 1. i3
     if command -v i3-msg >/dev/null 2>&1; then
@@ -255,7 +256,8 @@ cmd_reload() {
     if command -v dunst >/dev/null 2>&1; then
         info "Перезапуск Dunst..."
         killall dunst 2>/dev/null || true
-        dunst -config "${HOME}/.cache/wal/dunstrc" >/dev/null 2>&1 &
+        sleep 0.1
+        dunst >/dev/null 2>&1 &
         log "Dunst перезапущен"
     fi
 
