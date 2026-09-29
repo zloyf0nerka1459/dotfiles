@@ -41,15 +41,36 @@
 | **`Mod + B`** | Веб-браузер |
 | **`Mod + C`** | Менеджер буфера обмена **CopyQ** |
 | **`Mod + P`** | Игровой режим (вкл/выкл композитор **Picom**) |
+| **`Mod + L`** | Заблокировать экран (**Betterlockscreen**) |
+| **`Mod + Escape`** | Меню питания / выключения (**Power Menu**) |
 | **`Mod + F1`** | Шпаргалка всех хоткеев в Rofi |
-| **`Mod + ,`** | **Параметры системы** (Центр управления в стиле KDE: мышь, экран, клавиатура) |
+| **`Mod + ,`** | **Параметры системы** (Material Design 3 Control Center) |
 | **`Mod + Space`** | Переключение раскладки клавиатуры (US / RU) |
 | **`Print`** | Скриншот текущего экрана в буфер и файл |
 | **`Shift + Print`** | Скриншот выделенной области |
 | **`Mod + Shift + Q`** | Закрыть текущее окно |
 | **`Mod + 1..0`** | Переключение на рабочий стол 1–10 |
 | **`Mod + Shift + 1..0`** | Перенос окна на рабочий стол 1–10 |
-| **`Mod + Shift + R`** | Перезагрузить i3 на лету |
+| **`Mod + Shift + C`** | Перезагрузить i3 на лету |
+
+---
+
+## ⚡ Управление через утилиту `dots`
+
+В репозиторий включена мощная CLI-утилита `dots` (`~/.local/bin/dots`):
+
+```bash
+dots status         # Статус i3, EWW, Picom, Dunst, текущей темы и Git
+dots sync           # Синхронизация live-конфигов из ~/.config в ~/dotfiles
+dots diff           # Просмотр различий перед коммитом
+dots reload         # Бесшовная перезагрузка i3, EWW, Picom, Dunst, Xresources
+dots check          # Проверка синтаксиса всех конфигов и скриптов
+dots commit [msg]   # Синхронизация и коммит изменений в Git
+dots backup         # Создание .tar.gz архива настроек в ~/backups/
+dots push           # Отправка коммитов в GitHub
+dots pull           # Получение обновлений из GitHub и релоад
+dots theme [name]   # Выбор или применение темы
+```
 
 ---
 
@@ -57,7 +78,7 @@
 
 ### В одну команду:
 ```bash
-git clone https://github.com/YOUR_USERNAME/dotfiles.git ~/dotfiles
+git clone git@github.com:zloyf0nerka1459/dotfiles.git ~/dotfiles
 cd ~/dotfiles
 ./install.sh
 ```
@@ -66,7 +87,7 @@ cd ~/dotfiles
 1. Проверит окружение Arch Linux и наличие AUR-хелпера (`yay` / `paru`).
 2. Установит все необходимые пакеты и шрифты.
 3. Создаст резервную копию твоих текущих конфигураций в `~/.config_backup_TIMESTAMP`.
-4. Свяжет файлы через **GNU Stow**.
+4. Свяжет файлы через **GNU Stow** (`stow --adopt`).
 5. Применит дефолтную тему `Ghibli Serenity` (сгенерирует палитры Pywal, кэши EWW и `.fehbg`).
 
 ---
@@ -94,11 +115,13 @@ dotfiles/
 ├── themes/                 -> ~/.config/themes/
 ├── wal/                    -> ~/.config/wal/
 ├── starship/               -> ~/.config/starship.toml
+├── fastfetch/              -> ~/.config/fastfetch/
+├── fish/                   -> ~/.config/fish/
 ├── gtk/                    -> ~/.config/gtk-3.0/, ~/.config/xsettingsd/
 ├── xorg/                   -> ~/.Xresources
 ├── system-control-center/  -> ~/.config/system-control-center/, applications/
 ├── system/                 -> /etc/X11/xorg.conf.d/ (системные твики Xorg)
-├── bin/                    -> ~/.local/bin/
+├── bin/                    -> ~/.local/bin/ (dots, theme-*, scc)
 ├── install.sh              # Универсальный установщик
 └── README.md
 ```
