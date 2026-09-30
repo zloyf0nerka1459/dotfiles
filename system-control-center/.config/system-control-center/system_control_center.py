@@ -42,6 +42,7 @@ THEMES_DIR = CONFIG_HOME / "themes"
 XRESOURCES_PATH = HOME / ".Xresources"
 CURRENT_USER = os.environ.get("USER") or "fonera"
 USER_ADMIN_HELPER_PATH = DATA_DIR / "user-admin-helper.sh"
+AVATAR_SOURCE_PATH = DATA_DIR / "avatar_source.png"
 
 # ==============================================================================
 # Material Design 3 (M3) — Material You Dynamic Theming System
@@ -509,12 +510,45 @@ button.destructive-action:hover,
     font-weight: 600;
 }}
 
-/* --- M3 Avatar Frame --- */
+/* --- M3 Avatar Frame & Interactive Button --- */
 .avatar-frame {{
     border-radius: 9999px;
     border: 2px solid {p['outline_variant']};
     padding: 3px;
     background-color: {p['surface_container_high']};
+}}
+
+button.avatar-btn {{
+    background: transparent;
+    background-color: transparent;
+    border-radius: 9999px;
+    padding: 2px;
+    border: none;
+    box-shadow: none;
+    transition: all 180ms ease;
+}}
+
+button.avatar-btn:hover {{
+    background: transparent;
+    background-color: transparent;
+    box-shadow: 0 0 0 4px rgba({p['primary_rgb']}, 0.25);
+}}
+
+button.avatar-btn:active {{
+    box-shadow: 0 0 0 6px rgba({p['primary_rgb']}, 0.40);
+}}
+
+.avatar-edit-badge {{
+    background-color: {p['primary']};
+    color: {p['on_primary']};
+    border-radius: 9999px;
+    padding: 6px;
+    border: 2px solid {p['surface_container']};
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+}}
+
+button.avatar-btn:hover .avatar-edit-badge {{
+    background-color: {p['primary_hover']};
 }}
 
 /* --- M3 Controls & Inputs --- */
@@ -1763,19 +1797,50 @@ def get_circular_avatar_pixbuf(path_str: str | Path | None, size: int = 96) -> G
     except Exception:
         return None
 
-def save_user_avatar(source_image_path: str | Path, target_user: str = CURRENT_USER) -> bool:
-    """Crops an image into a high-res square and saves it as ~/.face, ~/.face.icon and app cache."""
+def crop_and_mask_avatar(im: Image.Image, zoom: float = 1.0, offset_x: float = 0.0, offset_y: float = 0.0, size: int = 512) -> Image.Image:
+    """Crops an image into a circle with specified zoom and offset factors."""
+    im = im.convert("RGBA")
+    w, h = im.size
+    min_dim = min(w, h)
+    side = min_dim / max(1.0, float(zoom))
+
+    max_dx = (w - side) / 2.0
+    max_dy = (h - side) / 2.0
+
+    cx = (w / 2.0) + (float(offset_x) * max_dx)
+    cy = (h / 2.0) + (float(offset_y) * max_dy)
+
+    left = max(0.0, min(float(w - side), cx - side / 2.0))
+    top = max(0.0, min(float(h - side), cy - side / 2.0))
+    right = left + side
+    bottom = top + side
+
+    cropped = im.crop((int(round(left)), int(round(top)), int(round(right)), int(round(bottom))))
+    cropped = cropped.resize((size, size), Image.Resampling.LANCZOS)
+
+    mask = Image.new("L", (size, size), 0)
+    draw = ImageDraw.Draw(mask)
+    draw.ellipse((0, 0, size, size), fill=255)
+    cropped.putalpha(mask)
+    return cropped
+
+def render_cropped_pixbuf(im: Image.Image, zoom: float = 1.0, offset_x: float = 0.0, offset_y: float = 0.0, target_size: int = 180) -> GdkPixbuf.Pixbuf | None:
+    """Renders a circular cropped GdkPixbuf for live preview."""
     try:
-        src = Path(source_image_path).expanduser()
-        if not src.is_file():
-            return False
-        im = Image.open(src).convert("RGBA")
-        w, h = im.size
-        min_dim = min(w, h)
-        left = (w - min_dim) // 2
-        top = (h - min_dim) // 2
-        im = im.crop((left, top, left + min_dim, top + min_dim))
-        im = im.resize((512, 512), Image.Resampling.LANCZOS)
+        masked = crop_and_mask_avatar(im, zoom, offset_x, offset_y, target_size)
+        bio = io.BytesIO()
+        masked.save(bio, format="PNG")
+        loader = GdkPixbuf.PixbufLoader.new_with_type("png")
+        loader.write(bio.getvalue())
+        loader.close()
+        return loader.get_pixbuf()
+    except Exception:
+        return None
+
+def save_custom_cropped_avatar(im: Image.Image, zoom: float = 1.0, offset_x: float = 0.0, offset_y: float = 0.0, target_user: str = CURRENT_USER) -> bool:
+    """Saves avatar cropped with user parameters to ~/.face, ~/.face.icon, and data dir."""
+    try:
+        cropped_highres = crop_and_mask_avatar(im, zoom, offset_x, offset_y, size=512)
 
         user_info = pwd.getpwnam(target_user)
         user_dir = Path(user_info.pw_dir)
@@ -1783,9 +1848,9 @@ def save_user_avatar(source_image_path: str | Path, target_user: str = CURRENT_U
         face_icon_path = user_dir / ".face.icon"
         scc_avatar = DATA_DIR / "avatar.png"
 
-        im.save(face_path, format="PNG")
-        im.save(face_icon_path, format="PNG")
-        im.save(scc_avatar, format="PNG")
+        cropped_highres.save(face_path, format="PNG")
+        cropped_highres.save(face_icon_path, format="PNG")
+        cropped_highres.save(scc_avatar, format="PNG")
 
         face_path.chmod(0o644)
         face_icon_path.chmod(0o644)
@@ -1794,12 +1859,23 @@ def save_user_avatar(source_image_path: str | Path, target_user: str = CURRENT_U
     except Exception:
         return False
 
+def save_user_avatar(source_image_path: str | Path, target_user: str = CURRENT_USER) -> bool:
+    """Crops an image into a high-res square and saves it as ~/.face, ~/.face.icon and app cache."""
+    try:
+        src = Path(source_image_path).expanduser()
+        if not src.is_file():
+            return False
+        im = Image.open(src).convert("RGBA")
+        return save_custom_cropped_avatar(im, zoom=1.0, offset_x=0.0, offset_y=0.0, target_user=target_user)
+    except Exception:
+        return False
+
 def remove_user_avatar(target_user: str = CURRENT_USER) -> bool:
     """Removes avatar files for the given user."""
     try:
         user_info = pwd.getpwnam(target_user)
         user_dir = Path(user_info.pw_dir)
-        for p in (user_dir / ".face", user_dir / ".face.icon", DATA_DIR / "avatar.png"):
+        for p in (user_dir / ".face", user_dir / ".face.icon", DATA_DIR / "avatar.png", AVATAR_SOURCE_PATH):
             if p.exists():
                 p.unlink()
         return True
@@ -3602,11 +3678,33 @@ class ControlCenterWindow(Gtk.Window):
         frame.pack_start(img, False, False, 0)
         return frame
 
+    def create_interactive_avatar_button(self, username: str, size: int = 104) -> Gtk.Widget:
+        """Builds a clickable circular avatar button with edit badge and hover animation."""
+        avatar_frame = self.create_avatar_image(username, size=size)
+
+        overlay = Gtk.Overlay()
+        overlay.add(avatar_frame)
+
+        badge_box = Gtk.Box()
+        add_class(badge_box, "avatar-edit-badge")
+        badge_box.set_halign(Gtk.Align.END)
+        badge_box.set_valign(Gtk.Align.END)
+        badge_icon = Gtk.Image.new_from_icon_name("camera-photo-symbolic", Gtk.IconSize.MENU)
+        badge_box.pack_start(badge_icon, False, False, 0)
+        overlay.add_overlay(badge_box)
+
+        btn = Gtk.Button()
+        add_class(btn, "avatar-btn")
+        btn.add(overlay)
+        btn.set_tooltip_text("Нажмите на аватар, чтобы выбрать фото и настроить кадрирование")
+        btn.connect("clicked", lambda _: self.on_choose_avatar_clicked(None))
+        return btn
+
     def update_profile_avatar_display(self) -> None:
         """Refreshes the live avatar widget in the current user card."""
         for child in self.profile_avatar_box.get_children():
             self.profile_avatar_box.remove(child)
-        self.profile_avatar_widget = self.create_avatar_image(CURRENT_USER, size=104)
+        self.profile_avatar_widget = self.create_interactive_avatar_button(CURRENT_USER, size=104)
         self.profile_avatar_box.pack_start(self.profile_avatar_widget, False, False, 0)
         self.profile_avatar_box.show_all()
 
@@ -3638,10 +3736,10 @@ class ControlCenterWindow(Gtk.Window):
 
         u_top = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=24)
 
-        # Avatar container
+        # Avatar container (interactive clickable button)
         self.profile_avatar_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
         self.profile_avatar_box.set_valign(Gtk.Align.CENTER)
-        self.profile_avatar_widget = self.create_avatar_image(CURRENT_USER, size=104)
+        self.profile_avatar_widget = self.create_interactive_avatar_button(CURRENT_USER, size=104)
         self.profile_avatar_box.pack_start(self.profile_avatar_widget, False, False, 0)
         u_top.pack_start(self.profile_avatar_box, False, False, 0)
 
@@ -3724,16 +3822,16 @@ class ControlCenterWindow(Gtk.Window):
         av_text_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
         av_title = Gtk.Label(label="Аватар профиля", xalign=0)
         add_class(av_title, "card-row-title")
-        av_sub = Gtk.Label(label="Файл изображения (~/.face), используемый в системе и экране блокировки", xalign=0)
+        av_sub = Gtk.Label(label="Нажмите на изображение профиля выше, чтобы загрузить фото и настроить кадрирование", xalign=0)
         add_class(av_sub, "card-row-subtitle")
         av_text_box.pack_start(av_title, False, False, 0)
         av_text_box.pack_start(av_sub, False, False, 0)
         av_row.pack_start(av_text_box, True, True, 0)
 
-        btn_choose_av = Gtk.Button(label="Выбрать аватар...")
-        add_class(btn_choose_av, "btn-tonal")
-        btn_choose_av.connect("clicked", self.on_choose_avatar_clicked)
-        av_row.pack_end(btn_choose_av, False, False, 0)
+        btn_crop_cur = Gtk.Button(label="Кадрировать текущий...")
+        add_class(btn_crop_cur, "btn-tonal")
+        btn_crop_cur.connect("clicked", self.on_crop_current_avatar_clicked)
+        av_row.pack_end(btn_crop_cur, False, False, 0)
 
         btn_reset_av = Gtk.Button(label="Сбросить")
         add_class(btn_reset_av, "btn-tonal")
@@ -3888,7 +3986,7 @@ class ControlCenterWindow(Gtk.Window):
         else:
             self.set_status(f"Ошибка сохранения имени: {msg}")
 
-    def on_choose_avatar_clicked(self, _btn: Gtk.Button) -> None:
+    def on_choose_avatar_clicked(self, _btn: Any = None) -> None:
         dialog = Gtk.FileChooserDialog(
             title="Выберите изображение для аватара профиля",
             parent=self,
@@ -3914,16 +4012,200 @@ class ControlCenterWindow(Gtk.Window):
         dialog.add_filter(flt_all)
 
         response = dialog.run()
+        selected_file = None
         if response == Gtk.ResponseType.OK:
-            filepath = dialog.get_filename()
-            if filepath:
-                ok = save_user_avatar(filepath, CURRENT_USER)
-                if ok:
-                    self.update_profile_avatar_display()
-                    self.refresh_users_list()
-                    self.set_status("Аватар профиля успешно установлен")
-                else:
-                    self.set_status("Ошибка обработки изображения аватара")
+            selected_file = dialog.get_filename()
+        dialog.destroy()
+
+        if selected_file and Path(selected_file).is_file():
+            try:
+                shutil.copy2(selected_file, AVATAR_SOURCE_PATH)
+            except Exception:
+                pass
+            self.on_open_crop_dialog(selected_file)
+
+    def on_crop_current_avatar_clicked(self, _btn: Any = None) -> None:
+        if AVATAR_SOURCE_PATH.is_file():
+            self.on_open_crop_dialog(str(AVATAR_SOURCE_PATH))
+        else:
+            cur_face = HOME / ".face"
+            if cur_face.is_file():
+                self.on_open_crop_dialog(str(cur_face))
+            else:
+                self.set_status("Сначала выберите изображение для аватара")
+                self.on_choose_avatar_clicked(None)
+
+    def on_open_crop_dialog(self, image_path: str | Path) -> None:
+        """Opens an interactive Material Design 3 cropping and framing modal dialog."""
+        try:
+            src_img = Image.open(image_path).convert("RGBA")
+        except Exception as e:
+            self.set_status(f"Ошибка открытия файла изображения: {e}")
+            return
+
+        dialog = Gtk.Dialog(
+            title="Настройка кадрирования аватара",
+            parent=self,
+            modal=True,
+            destroy_with_parent=True,
+        )
+        dialog.set_default_size(480, 620)
+        add_class(dialog, "control-center-window")
+
+        content_area = dialog.get_content_area()
+        add_class(content_area, "content-area")
+        content_area.set_spacing(14)
+
+        d_title = Gtk.Label(label="Кадрирование аватара", xalign=0)
+        add_class(d_title, "page-title")
+        content_area.pack_start(d_title, False, False, 0)
+
+        d_sub = Gtk.Label(
+            label="Настройте масштаб и положение круглой области, чтобы лицо и важные детали отображались идеально.",
+            xalign=0,
+        )
+        add_class(d_sub, "card-row-subtitle")
+        d_sub.set_line_wrap(True)
+        content_area.pack_start(d_sub, False, False, 0)
+
+        preview_card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
+        preview_card.set_halign(Gtk.Align.CENTER)
+        preview_card.set_valign(Gtk.Align.CENTER)
+
+        preview_img = Gtk.Image()
+        preview_frame = Gtk.Box()
+        add_class(preview_frame, "avatar-frame")
+        preview_frame.pack_start(preview_img, False, False, 0)
+        preview_card.pack_start(preview_frame, False, False, 0)
+        content_area.pack_start(preview_card, False, False, 0)
+
+        controls_card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
+        add_class(controls_card, "card")
+        content_area.pack_start(controls_card, False, False, 0)
+
+        # Zoom scale
+        zoom_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
+        z_header = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
+        z_title = Gtk.Label(label="Масштаб (Zoom):", xalign=0)
+        add_class(z_title, "card-row-title")
+        z_val_lbl = Gtk.Label(label="1.00x", xalign=1)
+        add_class(z_val_lbl, "card-row-subtitle")
+        z_header.pack_start(z_title, True, True, 0)
+        z_header.pack_end(z_val_lbl, False, False, 0)
+        zoom_box.pack_start(z_header, False, False, 0)
+
+        scale_zoom = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL, 1.0, 3.0, 0.05)
+        scale_zoom.set_value(1.0)
+        scale_zoom.set_draw_value(False)
+        zoom_box.pack_start(scale_zoom, False, False, 0)
+        controls_card.pack_start(zoom_box, False, False, 0)
+
+        # Offset Y (Vertical) - Key for face / portrait centering
+        y_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
+        y_header = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
+        y_title = Gtk.Label(label="Положение по вертикали (Вверх / Вниз):", xalign=0)
+        add_class(y_title, "card-row-title")
+        y_val_lbl = Gtk.Label(label="0%", xalign=1)
+        add_class(y_val_lbl, "card-row-subtitle")
+        y_header.pack_start(y_title, True, True, 0)
+        y_header.pack_end(y_val_lbl, False, False, 0)
+        y_box.pack_start(y_header, False, False, 0)
+
+        scale_y = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL, -1.0, 1.0, 0.02)
+        scale_y.set_value(0.0)
+        scale_y.set_draw_value(False)
+        y_box.pack_start(scale_y, False, False, 0)
+        controls_card.pack_start(y_box, False, False, 0)
+
+        # Offset X (Horizontal)
+        x_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
+        x_header = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
+        x_title = Gtk.Label(label="Положение по горизонтали (Влево / Вправо):", xalign=0)
+        add_class(x_title, "card-row-title")
+        x_val_lbl = Gtk.Label(label="0%", xalign=1)
+        add_class(x_val_lbl, "card-row-subtitle")
+        x_header.pack_start(x_title, True, True, 0)
+        x_header.pack_end(x_val_lbl, False, False, 0)
+        x_box.pack_start(x_header, False, False, 0)
+
+        scale_x = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL, -1.0, 1.0, 0.02)
+        scale_x.set_value(0.0)
+        scale_x.set_draw_value(False)
+        x_box.pack_start(scale_x, False, False, 0)
+        controls_card.pack_start(x_box, False, False, 0)
+
+        # Presets
+        controls_card.pack_start(self.build_divider(), False, False, 0)
+        presets_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
+        p_label = Gtk.Label(label="Пресеты:", xalign=0)
+        add_class(p_label, "card-row-subtitle")
+        presets_row.pack_start(p_label, False, False, 0)
+
+        def apply_preset(z: float, ox: float, oy: float):
+            scale_zoom.set_value(z)
+            scale_x.set_value(ox)
+            scale_y.set_value(oy)
+
+        btn_p_center = Gtk.Button(label="По центру")
+        add_class(btn_p_center, "btn-tonal")
+        btn_p_center.connect("clicked", lambda _: apply_preset(1.0, 0.0, 0.0))
+        presets_row.pack_start(btn_p_center, False, False, 0)
+
+        btn_p_face = Gtk.Button(label="Фокус на лицо (верх)")
+        add_class(btn_p_face, "btn-tonal")
+        btn_p_face.connect("clicked", lambda _: apply_preset(1.2, 0.0, -0.4))
+        presets_row.pack_start(btn_p_face, False, False, 0)
+
+        btn_p_close = Gtk.Button(label="Крупный план")
+        add_class(btn_p_close, "btn-tonal")
+        btn_p_close.connect("clicked", lambda _: apply_preset(1.6, 0.0, -0.2))
+        presets_row.pack_start(btn_p_close, False, False, 0)
+
+        controls_card.pack_start(presets_row, False, False, 0)
+
+        # Update preview handler
+        def on_values_changed(_w=None):
+            z = scale_zoom.get_value()
+            ox = scale_x.get_value()
+            oy = scale_y.get_value()
+            z_val_lbl.set_text(f"{z:.2f}x")
+            y_val_lbl.set_text(f"{int(oy * 100):+d}%")
+            x_val_lbl.set_text(f"{int(ox * 100):+d}%")
+            pix = render_cropped_pixbuf(src_img, zoom=z, offset_x=ox, offset_y=oy, target_size=180)
+            if pix:
+                preview_img.set_from_pixbuf(pix)
+
+        scale_zoom.connect("value-changed", on_values_changed)
+        scale_x.connect("value-changed", on_values_changed)
+        scale_y.connect("value-changed", on_values_changed)
+
+        # Initial render
+        on_values_changed()
+
+        # Dialog Buttons
+        dialog.add_button("Отмена", Gtk.ResponseType.CANCEL)
+        apply_btn = dialog.add_button("Сохранить аватар", Gtk.ResponseType.OK)
+        add_class(apply_btn, "btn-primary")
+
+        cancel_btn = dialog.get_widget_for_response(Gtk.ResponseType.CANCEL)
+        if cancel_btn:
+            add_class(cancel_btn, "btn-tonal")
+
+        dialog.show_all()
+        response = dialog.run()
+
+        if response == Gtk.ResponseType.OK:
+            z = scale_zoom.get_value()
+            ox = scale_x.get_value()
+            oy = scale_y.get_value()
+            ok = save_custom_cropped_avatar(src_img, zoom=z, offset_x=ox, offset_y=oy, target_user=CURRENT_USER)
+            if ok:
+                self.update_profile_avatar_display()
+                self.refresh_users_list()
+                self.set_status("Аватар профиля успешно сохранен и применен")
+            else:
+                self.set_status("Ошибка сохранения кадрированного аватара")
+
         dialog.destroy()
 
     def on_reset_avatar_clicked(self, _btn: Gtk.Button) -> None:
