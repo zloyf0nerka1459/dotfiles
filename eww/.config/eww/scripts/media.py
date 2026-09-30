@@ -4,12 +4,17 @@ import json
 import sys
 import os
 import re
+import time
+import base64
 import urllib.request
+import urllib.parse
 import hashlib
 from pathlib import Path
 
 CACHE_DIR = Path('/tmp/eww_media_cache')
 DEFAULT_COVER = os.path.expanduser('~/.config/eww/assets/default_cover.png')
+SEEK_LOCK_FILE = CACHE_DIR / 'seek_lock.json'
+LENGTH_CACHE_FILE = CACHE_DIR / 'last_length.txt'
 
 CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -46,7 +51,7 @@ def extract_youtube_thumb(url):
         img_url = f"https://img.youtube.com/vi/{yt_id}/{quality}"
         try:
             req = urllib.request.Request(img_url, headers={'User-Agent': 'Mozilla/5.0'})
-            with urllib.request.urlopen(req, timeout=3) as resp:
+            with urllib.request.urlopen(req, timeout=2) as resp:
                 data = resp.read()
                 if len(data) > 1000:
                     with open(target, 'wb') as f:
@@ -56,9 +61,71 @@ def extract_youtube_thumb(url):
             continue
     return ""
 
-def resolve_cover_art(art_url, web_url):
+def fetch_online_cover_worker(artist, title, target_path):
+    lock_file = target_path.with_suffix('.lock')
+    try:
+        query = f"{artist} {title}".strip()
+        
+        # 1. Deezer API (Fastest and best matching)
+        try:
+            url = f"https://api.deezer.com/search?q={urllib.parse.quote(query)}&limit=1"
+            req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+            with urllib.request.urlopen(req, timeout=3) as resp:
+                data = json.loads(resp.read().decode())
+                if data.get('data'):
+                    album_obj = data['data'][0].get('album', {})
+                    img_url = album_obj.get('cover_big') or album_obj.get('cover_medium')
+                    if img_url:
+                        req_img = urllib.request.Request(img_url, headers={'User-Agent': 'Mozilla/5.0'})
+                        with urllib.request.urlopen(req_img, timeout=3) as img_resp:
+                            img_data = img_resp.read()
+                            if len(img_data) > 1000:
+                                target_path.write_bytes(img_data)
+                                return
+        except Exception:
+            pass
+
+        # 2. iTunes API fallback
+        try:
+            url = f"https://itunes.apple.com/search?term={urllib.parse.quote(query)}&media=music&entity=song&limit=1"
+            req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+            with urllib.request.urlopen(req, timeout=3) as resp:
+                data = json.loads(resp.read().decode())
+                if data.get('resultCount', 0) > 0:
+                    raw_art = data['results'][0].get('artworkUrl100', '')
+                    if raw_art:
+                        art_high = raw_art.replace('100x100bb', '512x512bb')
+                        req_img = urllib.request.Request(art_high, headers={'User-Agent': 'Mozilla/5.0'})
+                        with urllib.request.urlopen(req_img, timeout=3) as img_resp:
+                            img_data = img_resp.read()
+                            if len(img_data) > 1000:
+                                target_path.write_bytes(img_data)
+                                return
+        except Exception:
+            pass
+    finally:
+        try:
+            if lock_file.exists():
+                lock_file.unlink()
+        except Exception:
+            pass
+
+def resolve_cover_art(art_url, web_url, artist="", title=""):
     if art_url:
-        if art_url.startswith("file://"):
+        if art_url.startswith("data:image/"):
+            try:
+                header, b64_data = art_url.split(",", 1)
+                ext = "png" if "png" in header else "jpg"
+                img_bytes = base64.b64decode(b64_data)
+                h = hashlib.md5(img_bytes).hexdigest()
+                target = CACHE_DIR / f"art_{h}.{ext}"
+                if not target.exists() or target.stat().st_size == 0:
+                    with open(target, "wb") as f:
+                        f.write(img_bytes)
+                return str(target)
+            except Exception:
+                pass
+        elif art_url.startswith("file://"):
             local_path = urllib.parse.unquote(art_url[7:])
             if os.path.exists(local_path):
                 return local_path
@@ -69,10 +136,24 @@ def resolve_cover_art(art_url, web_url):
                 return str(target)
             try:
                 req = urllib.request.Request(art_url, headers={'User-Agent': 'Mozilla/5.0'})
-                with urllib.request.urlopen(req, timeout=3) as resp:
+                with urllib.request.urlopen(req, timeout=2) as resp:
                     with open(target, 'wb') as f:
                         f.write(resp.read())
                 return str(target)
+            except Exception:
+                pass
+        elif len(art_url) > 100 and not art_url.startswith("/"):
+            # Raw base64 fallback
+            try:
+                img_bytes = base64.b64decode(art_url)
+                if len(img_bytes) > 100:
+                    ext = "png" if img_bytes.startswith(b'\x89PNG') else "jpg"
+                    h = hashlib.md5(img_bytes).hexdigest()
+                    target = CACHE_DIR / f"art_{h}.{ext}"
+                    if not target.exists() or target.stat().st_size == 0:
+                        with open(target, "wb") as f:
+                            f.write(img_bytes)
+                    return str(target)
             except Exception:
                 pass
 
@@ -80,6 +161,26 @@ def resolve_cover_art(art_url, web_url):
         yt_art = extract_youtube_thumb(web_url)
         if yt_art:
             return yt_art
+
+    # Online cover lookup fallback when player provides no artUrl
+    if artist and title and title not in ("Нет трека", "Неизвестный трек"):
+        clean_q = f"{artist.lower().strip()}_{title.lower().strip()}"
+        h = hashlib.md5(clean_q.encode('utf-8')).hexdigest()
+        online_target = CACHE_DIR / f"online_{h}.jpg"
+        if online_target.exists() and online_target.stat().st_size > 0:
+            return str(online_target)
+        else:
+            lock_file = online_target.with_suffix('.lock')
+            if not lock_file.exists():
+                try:
+                    lock_file.touch()
+                    subprocess.Popen(
+                        [sys.executable, os.path.abspath(__file__), '--fetch-cover', artist, title, str(online_target)],
+                        stdout=subprocess.DEVNULL,
+                        stderr=subprocess.DEVNULL
+                    )
+                except Exception:
+                    pass
 
     return DEFAULT_COVER if os.path.exists(DEFAULT_COVER) else ""
 
@@ -92,7 +193,7 @@ def get_media_data():
     if code != 0 or not raw:
         return {
             "status": "Stopped",
-            "status_icon": "",
+            "status_icon": "󰐊",
             "is_playing": False,
             "title": "Нет трека",
             "artist": "Воспроизведение остановлено",
@@ -120,6 +221,7 @@ def get_media_data():
         try:
             # mpris:length is in microseconds
             length_sec = float(raw_length) / 1000000.0
+            LENGTH_CACHE_FILE.write_text(str(length_sec))
         except Exception:
             pass
 
@@ -136,11 +238,20 @@ def get_media_data():
     progress = 0
     if length_sec > 0:
         progress = max(0, min(100, int((pos_sec / length_sec) * 100)))
-    elif pos_sec > 0:
-        # If length is unknown, keep progress at 0 or estimated
-        progress = 0
 
-    cover_art = resolve_cover_art(art_url, web_url)
+    # Check if user recently dragged timeline (seek debounce / anti-rubberbanding)
+    if SEEK_LOCK_FILE.exists() and length_sec > 0:
+        try:
+            lock_data = json.loads(SEEK_LOCK_FILE.read_text())
+            time_diff = time.time() - float(lock_data.get("time", 0))
+            if time_diff < 1.5:
+                seek_pct = float(lock_data.get("target_pct", progress))
+                progress = max(0, min(100, int(seek_pct)))
+                pos_sec = (seek_pct / 100.0) * length_sec
+        except Exception:
+            pass
+
+    cover_art = resolve_cover_art(art_url, web_url, artist, title)
     is_playing = (status.lower() == "playing")
 
     # Shorten long titles gracefully if needed
@@ -154,7 +265,7 @@ def get_media_data():
 
     return {
         "status": status,
-        "status_icon": "" if is_playing else "",
+        "status_icon": "󰏤" if is_playing else "󰐊",
         "is_playing": is_playing,
         "title": clean_title,
         "full_title": title,
@@ -171,14 +282,31 @@ def get_media_data():
 def handle_seek_pct(pct_str):
     try:
         pct = float(pct_str)
-        # Get total length
-        raw, code = run_cmd(['playerctl', 'metadata', '--format', '{{mpris:length}}'])
-        if code == 0 and raw:
-            total_sec = float(raw) / 1000000.0
+        pct = max(0.0, min(100.0, pct))
+        
+        # 1. Immediately record seek lock with timestamp
+        SEEK_LOCK_FILE.write_text(json.dumps({"target_pct": pct, "time": time.time()}))
+        
+        # 2. Get total length (from cache or playerctl)
+        total_sec = 0.0
+        if LENGTH_CACHE_FILE.exists():
+            try:
+                total_sec = float(LENGTH_CACHE_FILE.read_text().strip())
+            except Exception:
+                pass
+                
+        if total_sec <= 0:
+            raw, code = run_cmd(['playerctl', 'metadata', '--format', '{{mpris:length}}'])
+            if code == 0 and raw:
+                try:
+                    total_sec = float(raw) / 1000000.0
+                    LENGTH_CACHE_FILE.write_text(str(total_sec))
+                except Exception:
+                    pass
+                    
+        if total_sec > 0:
             target_sec = (pct / 100.0) * total_sec
             run_cmd(['playerctl', 'position', str(round(target_sec, 1))])
-            return
-        # Fallback: if length unknown, ignore or treat as raw
     except Exception:
         pass
 
@@ -201,6 +329,8 @@ def main():
             handle_seek_pct(sys.argv[2])
         elif cmd == '--seek' and len(sys.argv) > 2:
             run_cmd(['playerctl', 'position', sys.argv[2]])
+        elif cmd == '--fetch-cover' and len(sys.argv) > 4:
+            fetch_online_cover_worker(sys.argv[2], sys.argv[3], Path(sys.argv[4]))
         elif cmd == '--status':
             print(json.dumps(get_media_data(), ensure_ascii=False))
         return

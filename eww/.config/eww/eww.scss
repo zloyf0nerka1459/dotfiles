@@ -581,6 +581,46 @@ scale {
   }
 }
 
+/* Dedicated Media Scrubber Slider */
+.media-slider {
+  min-height: 22px;
+  padding: 4px 0;
+
+  trough {
+    min-height: 6px;
+    border-radius: 9999px;
+    background-color: rgba($color8, 0.45);
+    border: none;
+  }
+
+  highlight {
+    min-height: 6px;
+    border-radius: 9999px;
+    background-color: $accent;
+    border: none;
+  }
+
+  slider {
+    min-width: 14px;
+    min-height: 14px;
+    margin: -4px 0;
+    border-radius: 9999px;
+    background-color: $accent;
+    border: 2px solid $background;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.45);
+    transition: all 0.12s ease;
+  }
+
+  slider:hover,
+  &:hover slider {
+    min-width: 16px;
+    min-height: 16px;
+    margin: -5px 0;
+    background-color: lighten($accent, 15%);
+    box-shadow: 0 0 10px rgba($accent, 0.65);
+  }
+}
+
 /* Progressbars */
 progress,
 progressbar {
