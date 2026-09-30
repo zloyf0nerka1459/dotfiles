@@ -1,0 +1,31 @@
+/* EWW Style for ❄️ Nord (Arctic Minimalist) */
+.bar-container {
+  background-color: rgba(#2e3440, 0.96);
+  border-bottom: 1px solid #4c566a;
+}
+.bottom-bar {
+  border-top: 1px solid #4c566a;
+}
+.chip {
+  border-radius: 4px;
+  background-color: rgba(#3b4252, 0.8);
+  border: 1px solid #4c566a;
+  color: #eceff4;
+}
+.chip:hover {
+  background-color: rgba(#88c0d0, 0.2);
+  border-color: #88c0d0;
+}
+.ws-btn.focused {
+  background-color: #88c0d0;
+  color: #2e3440;
+  border-radius: 4px;
+  font-weight: bold;
+}
+.ws-btn.occupied {
+  color: #81a1c1;
+}
+.task-btn.active {
+  background-color: rgba(#88c0d0, 0.2);
+  border-bottom: 2px solid #88c0d0;
+}

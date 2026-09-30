@@ -1,0 +1,31 @@
+/* EWW Style for 🎨 Aruko (Anime Pastel Warmth) */
+.bar-container {
+  background-color: rgba($color0, 0.94);
+  border-bottom: 2px solid rgba($color4, 0.6);
+}
+.bottom-bar {
+  border-top: 2px solid rgba($color4, 0.6);
+}
+.chip {
+  border-radius: 12px;
+  background-color: rgba($color8, 0.25);
+  border: 1px solid rgba($color4, 0.4);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+}
+.chip:hover {
+  background-color: rgba($color4, 0.3);
+  border-color: $color4;
+}
+.ws-btn {
+  border-radius: 10px;
+}
+.ws-btn.focused {
+  background-color: $color4;
+  color: $color0;
+  font-weight: 800;
+  box-shadow: 0 0 8px rgba($color4, 0.6);
+}
+.task-btn.active {
+  background-color: rgba($color4, 0.35);
+  border-bottom: 2px solid $color4;
+}

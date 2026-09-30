@@ -1,0 +1,28 @@
+/* EWW Style for 🐈‍⬛ Noir Cat (Minimalist OLED Contrast) */
+.bar-container {
+  background-color: rgba(#0a0b0e, 0.98);
+  border-bottom: 1px solid #333333;
+}
+.bottom-bar {
+  border-top: 1px solid #333333;
+}
+.chip {
+  border-radius: 4px;
+  background-color: rgba(#16181f, 0.9);
+  border: 1px solid #2a2c36;
+  color: #f0f0f0;
+}
+.chip:hover {
+  background-color: rgba(255, 255, 255, 0.15);
+  border-color: #ffffff;
+}
+.ws-btn.focused {
+  background-color: #ffffff;
+  color: #0a0b0e;
+  border-radius: 4px;
+  font-weight: 900;
+}
+.task-btn.active {
+  background-color: rgba(255, 255, 255, 0.15);
+  border-bottom: 2px solid #ffffff;
+}

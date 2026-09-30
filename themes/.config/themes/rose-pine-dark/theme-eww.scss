@@ -1,0 +1,31 @@
+/* EWW Style for 🌸 Rosé Pine Dark (SoHo Aesthetic) */
+.bar-container {
+  background-color: rgba(#191724, 0.95);
+  border-bottom: 2px solid rgba(#eb6f92, 0.5);
+}
+.bottom-bar {
+  border-top: 2px solid rgba(#eb6f92, 0.5);
+}
+.chip {
+  border-radius: 10px;
+  background-color: rgba(#26233a, 0.8);
+  border: 1px solid rgba(#eb6f92, 0.3);
+  color: #e0def4;
+}
+.chip:hover {
+  background-color: rgba(#eb6f92, 0.2);
+  border-color: #eb6f92;
+}
+.ws-btn.focused {
+  background-color: #eb6f92;
+  color: #191724;
+  border-radius: 8px;
+  font-weight: bold;
+}
+.ws-btn.occupied {
+  color: #f6c177;
+}
+.task-btn.active {
+  background-color: rgba(#31748f, 0.35);
+  border-bottom: 2px solid #31748f;
+}

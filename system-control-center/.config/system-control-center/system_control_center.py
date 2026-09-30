@@ -6,9 +6,12 @@
 
 import colorsys
 import configparser
+import grp
+import io
 import json
 import os
 import platform
+import pwd
 import re
 import shlex
 import shutil
@@ -16,6 +19,8 @@ import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
+
+from PIL import Image, ImageDraw, ImageOps
 
 import gi
 
@@ -35,6 +40,8 @@ INPUT_SCRIPT_PATH = DATA_DIR / "apply-input-settings.sh"
 LAUNCHER_SCRIPT_PATH = DATA_DIR / "launch.sh"
 THEMES_DIR = CONFIG_HOME / "themes"
 XRESOURCES_PATH = HOME / ".Xresources"
+CURRENT_USER = os.environ.get("USER") or "fonera"
+USER_ADMIN_HELPER_PATH = DATA_DIR / "user-admin-helper.sh"
 
 # ==============================================================================
 # Material Design 3 (M3) — Material You Dynamic Theming System
@@ -126,6 +133,11 @@ def get_m3_dynamic_palette() -> dict[str, Any]:
         "on_surface_variant": hsl_to_hex(bg_h, 0.68, min(bg_s * 0.3, 0.15)),
         "outline": hsl_to_hex(bg_h, 0.40, min(bg_s * 0.3, 0.15)),
         "outline_variant": hsl_to_hex(bg_h, 0.22, min(bg_s * 0.3, 0.12)),
+
+        "error": "#f2b8b5",
+        "on_error": "#601410",
+        "error_container": "#8c1d18",
+        "on_error_container": "#f9dedc",
 
         "seed_accent": best_accent,
         "wallpaper": data.get("wallpaper", "")
@@ -434,6 +446,25 @@ button:hover,
     border-color: {p['primary']};
 }}
 
+/* --- Destructive Action / Danger Button --- */
+button.destructive-action,
+.btn-danger {{
+    background-color: #ba1a1a;
+    color: #ffffff;
+    font-weight: 600;
+    font-size: 13px;
+    border-radius: 9999px;
+    padding: 8px 18px;
+    border: none;
+    box-shadow: none;
+}}
+
+button.destructive-action:hover,
+.btn-danger:hover {{
+    background-color: #de3730;
+    color: #ffffff;
+}}
+
 /* --- M3 Chips & Badges --- */
 .badge-tag,
 .m3-chip {{
@@ -466,6 +497,24 @@ button:hover,
     padding: 5px 14px;
     font-size: 12px;
     font-weight: 600;
+}}
+
+.m3-chip-error {{
+    background-color: rgba(242, 184, 181, 0.14);
+    border: 1px solid rgba(242, 184, 181, 0.35);
+    color: #f2b8b5;
+    border-radius: 9999px;
+    padding: 5px 14px;
+    font-size: 12px;
+    font-weight: 600;
+}}
+
+/* --- M3 Avatar Frame --- */
+.avatar-frame {{
+    border-radius: 9999px;
+    border: 2px solid {p['outline_variant']};
+    padding: 3px;
+    background-color: {p['surface_container_high']};
 }}
 
 /* --- M3 Controls & Inputs --- */
@@ -1679,6 +1728,132 @@ def set_systemd_user_service_active(service_name: str, start: bool) -> None:
     subprocess.run(["systemctl", "--user", action, service_name], check=False)
 
 # ==============================================================================
+# Profile & User Management Helpers
+# ==============================================================================
+
+def get_circular_avatar_pixbuf(path_str: str | Path | None, size: int = 96) -> GdkPixbuf.Pixbuf | None:
+    """Creates a circular-cropped GdkPixbuf from an image file path with smooth anti-aliased edges."""
+    if not path_str:
+        return None
+    p = Path(path_str).expanduser()
+    if not p.is_file():
+        return None
+    try:
+        im = Image.open(p).convert("RGBA")
+        w, h = im.size
+        min_dim = min(w, h)
+        left = (w - min_dim) // 2
+        top = (h - min_dim) // 2
+        im = im.crop((left, top, left + min_dim, top + min_dim))
+        im = im.resize((size, size), Image.Resampling.LANCZOS)
+
+        mask = Image.new("L", (size, size), 0)
+        draw = ImageDraw.Draw(mask)
+        draw.ellipse((0, 0, size, size), fill=255)
+        im.putalpha(mask)
+
+        bio = io.BytesIO()
+        im.save(bio, format="PNG")
+        data = bio.getvalue()
+
+        loader = GdkPixbuf.PixbufLoader.new_with_type("png")
+        loader.write(data)
+        loader.close()
+        return loader.get_pixbuf()
+    except Exception:
+        return None
+
+def save_user_avatar(source_image_path: str | Path, target_user: str = CURRENT_USER) -> bool:
+    """Crops an image into a high-res square and saves it as ~/.face, ~/.face.icon and app cache."""
+    try:
+        src = Path(source_image_path).expanduser()
+        if not src.is_file():
+            return False
+        im = Image.open(src).convert("RGBA")
+        w, h = im.size
+        min_dim = min(w, h)
+        left = (w - min_dim) // 2
+        top = (h - min_dim) // 2
+        im = im.crop((left, top, left + min_dim, top + min_dim))
+        im = im.resize((512, 512), Image.Resampling.LANCZOS)
+
+        user_info = pwd.getpwnam(target_user)
+        user_dir = Path(user_info.pw_dir)
+        face_path = user_dir / ".face"
+        face_icon_path = user_dir / ".face.icon"
+        scc_avatar = DATA_DIR / "avatar.png"
+
+        im.save(face_path, format="PNG")
+        im.save(face_icon_path, format="PNG")
+        im.save(scc_avatar, format="PNG")
+
+        face_path.chmod(0o644)
+        face_icon_path.chmod(0o644)
+        scc_avatar.chmod(0o644)
+        return True
+    except Exception:
+        return False
+
+def remove_user_avatar(target_user: str = CURRENT_USER) -> bool:
+    """Removes avatar files for the given user."""
+    try:
+        user_info = pwd.getpwnam(target_user)
+        user_dir = Path(user_info.pw_dir)
+        for p in (user_dir / ".face", user_dir / ".face.icon", DATA_DIR / "avatar.png"):
+            if p.exists():
+                p.unlink()
+        return True
+    except Exception:
+        return False
+
+def get_system_users() -> list[dict[str, Any]]:
+    """Returns list of real human system user accounts (UID >= 1000)."""
+    users: list[dict[str, Any]] = []
+    wheel_members: set[str] = set()
+    try:
+        wheel_members = set(grp.getgrnam("wheel").gr_mem)
+    except KeyError:
+        pass
+    try:
+        sudo_members = set(grp.getgrnam("sudo").gr_mem)
+        wheel_members.update(sudo_members)
+    except KeyError:
+        pass
+
+    for u in pwd.getpwall():
+        if u.pw_uid >= 1000 and u.pw_name != "nobody":
+            is_admin = (u.pw_name in wheel_members) or (u.pw_name == CURRENT_USER)
+            face_path = Path(u.pw_dir) / ".face"
+            users.append({
+                "name": u.pw_name,
+                "uid": u.pw_uid,
+                "gid": u.pw_gid,
+                "gecos": u.pw_gecos,
+                "dir": u.pw_dir,
+                "shell": u.pw_shell,
+                "is_admin": is_admin,
+                "has_avatar": face_path.exists(),
+                "avatar_path": str(face_path) if face_path.exists() else None,
+            })
+    return sorted(users, key=lambda x: (0 if x["name"] == CURRENT_USER else 1, x["uid"]))
+
+def run_user_admin_cmd(*args: str) -> tuple[bool, str]:
+    """Runs administrative user operations using pkexec and user-admin-helper.sh."""
+    if not USER_ADMIN_HELPER_PATH.exists():
+        return False, f"Файл {USER_ADMIN_HELPER_PATH} не найден"
+    cmd = ["pkexec", str(USER_ADMIN_HELPER_PATH)] + list(args)
+    try:
+        proc = subprocess.run(cmd, capture_output=True, text=True, check=False)
+        if proc.returncode == 0:
+            return True, proc.stdout.strip()
+        err = proc.stderr.strip() or proc.stdout.strip()
+        if not err and proc.returncode in (126, 127):
+            err = "Операция отменена пользователем (Polkit)"
+        return False, err or f"Код ошибки {proc.returncode}"
+    except Exception as e:
+        return False, str(e)
+
+# ==============================================================================
 # Main Window (Material Design 3)
 # ==============================================================================
 class ControlCenterWindow(Gtk.Window):
@@ -1728,6 +1903,7 @@ class ControlCenterWindow(Gtk.Window):
         self.page_appearance = self.build_appearance_page()
         self.page_autostart = self.build_autostart_page()
         self.page_shortcuts = self.build_shortcuts_page()
+        self.page_profile = self.build_profile_page()
         self.page_about = self.build_about_page()
 
         self.stack.add_named(self.page_mouse, "mouse")
@@ -1737,6 +1913,7 @@ class ControlCenterWindow(Gtk.Window):
         self.stack.add_named(self.page_appearance, "appearance")
         self.stack.add_named(self.page_autostart, "autostart")
         self.stack.add_named(self.page_shortcuts, "shortcuts")
+        self.stack.add_named(self.page_profile, "profile")
         self.stack.add_named(self.page_about, "about")
 
         # Bottom status bar
@@ -1838,7 +2015,8 @@ class ControlCenterWindow(Gtk.Window):
             ("HEADER", "Рабочая среда", None, None),
             ("ITEM", "Автозапуск", "system-run-symbolic", "autostart"),
             ("ITEM", "Горячие клавиши", "preferences-desktop-keyboard-shortcuts-symbolic", "shortcuts"),
-            ("HEADER", "Система", None, None),
+            ("HEADER", "Система и пользователи", None, None),
+            ("ITEM", "Профиль и пользователи", "system-users-symbolic", "profile"),
             ("ITEM", "О системе", "help-about-symbolic", "about"),
         ]
 
@@ -3397,7 +3575,645 @@ class ControlCenterWindow(Gtk.Window):
         return scrolled
 
     # --------------------------------------------------------------------------
-    # Page 8: About System
+    # Page 8: Profile & User Management (Google M3 Specifications)
+    # --------------------------------------------------------------------------
+    def create_avatar_image(self, username: str, size: int = 96) -> Gtk.Widget:
+        """Builds a circular avatar container for the given username."""
+        avatar_path = None
+        try:
+            u_entry = pwd.getpwnam(username)
+            candidate = Path(u_entry.pw_dir) / ".face"
+            if candidate.is_file():
+                avatar_path = candidate
+        except Exception:
+            pass
+
+        pix = get_circular_avatar_pixbuf(avatar_path, size=size) if avatar_path else None
+        if pix:
+            img = Gtk.Image.new_from_pixbuf(pix)
+        else:
+            img = Gtk.Image.new_from_icon_name("avatar-default-symbolic", Gtk.IconSize.DIALOG if size > 64 else Gtk.IconSize.DND)
+            img.set_pixel_size(size)
+
+        frame = Gtk.Box()
+        add_class(frame, "avatar-frame")
+        frame.set_valign(Gtk.Align.CENTER)
+        frame.set_halign(Gtk.Align.CENTER)
+        frame.pack_start(img, False, False, 0)
+        return frame
+
+    def update_profile_avatar_display(self) -> None:
+        """Refreshes the live avatar widget in the current user card."""
+        for child in self.profile_avatar_box.get_children():
+            self.profile_avatar_box.remove(child)
+        self.profile_avatar_widget = self.create_avatar_image(CURRENT_USER, size=104)
+        self.profile_avatar_box.pack_start(self.profile_avatar_widget, False, False, 0)
+        self.profile_avatar_box.show_all()
+
+    def build_profile_page(self) -> Gtk.Widget:
+        scrolled = Gtk.ScrolledWindow()
+        scrolled.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
+        root = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
+        add_class(root, "content-area")
+        scrolled.add(root)
+
+        # Page Header
+        header = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
+        add_class(header, "page-header")
+        title = Gtk.Label(label="Профиль и пользователи", xalign=0)
+        add_class(title, "page-title")
+        subtitle = Gtk.Label(label="Управление личным профилем, аватаркой и учетными записями операционной системы", xalign=0)
+        add_class(subtitle, "page-subtitle")
+        header.pack_start(title, False, False, 0)
+        header.pack_start(subtitle, False, False, 0)
+        root.pack_start(header, False, False, 0)
+
+        # ----------------------------------------------------------------------
+        # Card 1: Current User Profile
+        # ----------------------------------------------------------------------
+        root.pack_start(self.build_section_header("Мой профиль"), False, False, 0)
+        profile_card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=16)
+        add_class(profile_card, "card")
+        root.pack_start(profile_card, False, False, 0)
+
+        u_top = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=24)
+
+        # Avatar container
+        self.profile_avatar_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
+        self.profile_avatar_box.set_valign(Gtk.Align.CENTER)
+        self.profile_avatar_widget = self.create_avatar_image(CURRENT_USER, size=104)
+        self.profile_avatar_box.pack_start(self.profile_avatar_widget, False, False, 0)
+        u_top.pack_start(self.profile_avatar_box, False, False, 0)
+
+        # Info Box
+        u_info = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
+        u_info.set_valign(Gtk.Align.CENTER)
+
+        # Username row with badges
+        u_name_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
+        u_name_lbl = Gtk.Label(label=CURRENT_USER, xalign=0)
+        u_name_lbl.set_markup(f"<span font='20' weight='bold'>{CURRENT_USER}</span>")
+        u_name_row.pack_start(u_name_lbl, False, False, 0)
+
+        badge_cur = Gtk.Label(label="Текущий сеанс")
+        add_class(badge_cur, "m3-chip-success")
+        u_name_row.pack_start(badge_cur, False, False, 0)
+
+        # Admin status
+        users_list = get_system_users()
+        cur_is_admin = any(u["name"] == CURRENT_USER and u["is_admin"] for u in users_list)
+        badge_role = Gtk.Label(label="Администратор (wheel)" if cur_is_admin else "Стандартный пользователь")
+        add_class(badge_role, "m3-chip" if cur_is_admin else "m3-chip-warning")
+        u_name_row.pack_start(badge_role, False, False, 0)
+        u_info.pack_start(u_name_row, False, False, 0)
+
+        # Display Name row
+        fn_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
+        fn_lbl = Gtk.Label(label="Отображаемое имя:", xalign=0)
+        add_class(fn_lbl, "card-row-subtitle")
+        fn_lbl.set_size_request(140, -1)
+        fn_row.pack_start(fn_lbl, False, False, 0)
+
+        cur_gecos = ""
+        try:
+            cur_gecos = pwd.getpwnam(CURRENT_USER).pw_gecos
+        except Exception:
+            pass
+        self.profile_fullname_entry = Gtk.Entry()
+        self.profile_fullname_entry.set_text(cur_gecos)
+        self.profile_fullname_entry.set_placeholder_text("Ваше имя или псевдоним")
+        self.profile_fullname_entry.set_width_chars(24)
+        fn_row.pack_start(self.profile_fullname_entry, False, False, 0)
+
+        save_fn_btn = Gtk.Button(label="Сохранить")
+        add_class(save_fn_btn, "btn-tonal")
+        save_fn_btn.connect("clicked", self.on_save_my_fullname)
+        fn_row.pack_start(save_fn_btn, False, False, 0)
+        u_info.pack_start(fn_row, False, False, 0)
+
+        # Badges row for Shell and Home
+        cur_shell = "/bin/bash"
+        cur_home = str(HOME)
+        cur_uid = 1000
+        try:
+            u_entry = pwd.getpwnam(CURRENT_USER)
+            cur_shell = u_entry.pw_shell
+            cur_home = u_entry.pw_dir
+            cur_uid = u_entry.pw_uid
+        except Exception:
+            pass
+
+        badges_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
+        b_home = Gtk.Label(label=f"Папка: {cur_home}")
+        add_class(b_home, "m3-chip")
+        b_shell = Gtk.Label(label=f"Shell: {cur_shell}")
+        add_class(b_shell, "m3-chip")
+        b_uid = Gtk.Label(label=f"UID: {cur_uid}")
+        add_class(b_uid, "m3-chip")
+        badges_row.pack_start(b_home, False, False, 0)
+        badges_row.pack_start(b_shell, False, False, 0)
+        badges_row.pack_start(b_uid, False, False, 0)
+        u_info.pack_start(badges_row, False, False, 0)
+
+        u_top.pack_start(u_info, True, True, 0)
+        profile_card.pack_start(u_top, False, False, 0)
+
+        # Avatar controls row
+        profile_card.pack_start(self.build_divider(), False, False, 0)
+        av_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=16)
+        av_text_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
+        av_title = Gtk.Label(label="Аватар профиля", xalign=0)
+        add_class(av_title, "card-row-title")
+        av_sub = Gtk.Label(label="Файл изображения (~/.face), используемый в системе и экране блокировки", xalign=0)
+        add_class(av_sub, "card-row-subtitle")
+        av_text_box.pack_start(av_title, False, False, 0)
+        av_text_box.pack_start(av_sub, False, False, 0)
+        av_row.pack_start(av_text_box, True, True, 0)
+
+        btn_choose_av = Gtk.Button(label="Выбрать аватар...")
+        add_class(btn_choose_av, "btn-tonal")
+        btn_choose_av.connect("clicked", self.on_choose_avatar_clicked)
+        av_row.pack_end(btn_choose_av, False, False, 0)
+
+        btn_reset_av = Gtk.Button(label="Сбросить")
+        add_class(btn_reset_av, "btn-tonal")
+        btn_reset_av.connect("clicked", self.on_reset_avatar_clicked)
+        av_row.pack_end(btn_reset_av, False, False, 0)
+
+        profile_card.pack_start(av_row, False, False, 0)
+
+        # Password management row
+        profile_card.pack_start(self.build_divider(), False, False, 0)
+        pw_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=16)
+        pw_text_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
+        pw_title = Gtk.Label(label="Пароль учетной записи", xalign=0)
+        add_class(pw_title, "card-row-title")
+        pw_sub = Gtk.Label(label="Сменить системный пароль для текущего профиля", xalign=0)
+        add_class(pw_sub, "card-row-subtitle")
+        pw_text_box.pack_start(pw_title, False, False, 0)
+        pw_text_box.pack_start(pw_sub, False, False, 0)
+        pw_row.pack_start(pw_text_box, True, True, 0)
+
+        btn_change_pw = Gtk.Button(label="Сменить пароль")
+        add_class(btn_change_pw, "btn-tonal")
+        btn_change_pw.connect("clicked", lambda _: self.on_change_password_dialog(CURRENT_USER))
+        pw_row.pack_end(btn_change_pw, False, False, 0)
+
+        profile_card.pack_start(pw_row, False, False, 0)
+
+        # ----------------------------------------------------------------------
+        # Card 2: System User Accounts
+        # ----------------------------------------------------------------------
+        root.pack_start(self.build_section_header("Учетные записи системы"), False, False, 0)
+        users_card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=16)
+        add_class(users_card, "card")
+        root.pack_start(users_card, False, False, 0)
+
+        u_header_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=16)
+        u_h_text = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
+        u_h_title = Gtk.Label(label="Пользователи операционной системы", xalign=0)
+        add_class(u_h_title, "card-title")
+        u_h_sub = Gtk.Label(label="Создавайте аккаунты без root (для гостей/членов семьи) или с правами администратора", xalign=0)
+        add_class(u_h_sub, "card-subtitle")
+        u_h_text.pack_start(u_h_title, False, False, 0)
+        u_h_text.pack_start(u_h_sub, False, False, 0)
+        u_header_row.pack_start(u_h_text, True, True, 0)
+
+        btn_add_user = Gtk.Button(label="+ Создать пользователя")
+        add_class(btn_add_user, "suggested-action")
+        btn_add_user.connect("clicked", self.on_create_user_dialog)
+        u_header_row.pack_end(btn_add_user, False, False, 0)
+
+        btn_refresh_users = Gtk.Button(label="Обновить")
+        add_class(btn_refresh_users, "btn-tonal")
+        btn_refresh_users.connect("clicked", lambda _: self.refresh_users_list())
+        u_header_row.pack_end(btn_refresh_users, False, False, 0)
+
+        users_card.pack_start(u_header_row, False, False, 0)
+        users_card.pack_start(self.build_divider(), False, False, 0)
+
+        self.users_list_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
+        users_card.pack_start(self.users_list_box, False, False, 0)
+        self.refresh_users_list()
+
+        return scrolled
+
+    def refresh_users_list(self) -> None:
+        """Re-populates the list of system accounts."""
+        if not hasattr(self, "users_list_box"):
+            return
+        for child in self.users_list_box.get_children():
+            self.users_list_box.remove(child)
+
+        users = get_system_users()
+        for idx, u in enumerate(users):
+            if idx > 0:
+                self.users_list_box.pack_start(self.build_divider(), False, False, 0)
+
+            row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=16)
+            add_class(row, "card-row")
+
+            av_widget = self.create_avatar_image(u["name"], size=46)
+            row.pack_start(av_widget, False, False, 0)
+
+            info_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
+            info_box.set_valign(Gtk.Align.CENTER)
+
+            top_title_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
+            name_lbl = Gtk.Label(label=u["name"], xalign=0)
+            add_class(name_lbl, "card-row-title")
+            top_title_row.pack_start(name_lbl, False, False, 0)
+
+            if u["gecos"]:
+                gecos_lbl = Gtk.Label(label=f"({u['gecos']})", xalign=0)
+                add_class(gecos_lbl, "card-row-subtitle")
+                top_title_row.pack_start(gecos_lbl, False, False, 0)
+
+            if u["is_admin"]:
+                admin_chip = Gtk.Label(label="Администратор")
+                add_class(admin_chip, "m3-chip-success")
+                top_title_row.pack_start(admin_chip, False, False, 0)
+            else:
+                user_chip = Gtk.Label(label="Пользователь (без root)")
+                add_class(user_chip, "m3-chip")
+                top_title_row.pack_start(user_chip, False, False, 0)
+
+            if u["name"] == CURRENT_USER:
+                you_chip = Gtk.Label(label="Текущий сеанс")
+                add_class(you_chip, "m3-chip-warning")
+                top_title_row.pack_start(you_chip, False, False, 0)
+
+            info_box.pack_start(top_title_row, False, False, 0)
+
+            sub_lbl = Gtk.Label(label=f"UID: {u['uid']}  •  Папка: {u['dir']}  •  Shell: {u['shell']}", xalign=0)
+            add_class(sub_lbl, "card-row-subtitle")
+            info_box.pack_start(sub_lbl, False, False, 0)
+
+            row.pack_start(info_box, True, True, 0)
+
+            actions_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
+            actions_box.set_valign(Gtk.Align.CENTER)
+
+            if u["name"] != CURRENT_USER:
+                btn_adm = Gtk.Button(label="Снять root" if u["is_admin"] else "Дать root")
+                add_class(btn_adm, "btn-tonal")
+                btn_adm.connect("clicked", lambda _, name=u["name"], grant=not u["is_admin"]: self.on_toggle_admin(name, grant))
+                actions_box.pack_start(btn_adm, False, False, 0)
+
+                btn_pw = Gtk.Button(label="Пароль")
+                add_class(btn_pw, "btn-tonal")
+                btn_pw.connect("clicked", lambda _, name=u["name"]: self.on_change_password_dialog(name))
+                actions_box.pack_start(btn_pw, False, False, 0)
+
+                btn_del = Gtk.Button(label="Удалить")
+                add_class(btn_del, "btn-danger")
+                btn_del.connect("clicked", lambda _, name=u["name"]: self.on_delete_user_dialog(name))
+                actions_box.pack_start(btn_del, False, False, 0)
+            else:
+                active_chip = Gtk.Label(label="Основной аккаунт")
+                add_class(active_chip, "m3-chip")
+                actions_box.pack_start(active_chip, False, False, 0)
+
+            row.pack_end(actions_box, False, False, 0)
+            self.users_list_box.pack_start(row, False, False, 0)
+
+        self.users_list_box.show_all()
+
+    def on_save_my_fullname(self, _btn: Gtk.Button) -> None:
+        new_name = self.profile_fullname_entry.get_text().strip()
+        ok, msg = run_user_admin_cmd("set-fullname", CURRENT_USER, new_name)
+        if ok:
+            self.set_status(f"Имя профиля сохранено: {new_name}")
+            self.refresh_users_list()
+        else:
+            self.set_status(f"Ошибка сохранения имени: {msg}")
+
+    def on_choose_avatar_clicked(self, _btn: Gtk.Button) -> None:
+        dialog = Gtk.FileChooserDialog(
+            title="Выберите изображение для аватара профиля",
+            parent=self,
+            action=Gtk.FileChooserAction.OPEN,
+        )
+        dialog.add_button("Отмена", Gtk.ResponseType.CANCEL)
+        dialog.add_button("Выбрать", Gtk.ResponseType.OK)
+
+        flt = Gtk.FileFilter()
+        flt.set_name("Изображения (*.png, *.jpg, *.jpeg, *.webp)")
+        flt.add_mime_type("image/png")
+        flt.add_mime_type("image/jpeg")
+        flt.add_mime_type("image/webp")
+        flt.add_pattern("*.png")
+        flt.add_pattern("*.jpg")
+        flt.add_pattern("*.jpeg")
+        flt.add_pattern("*.webp")
+        dialog.add_filter(flt)
+
+        flt_all = Gtk.FileFilter()
+        flt_all.set_name("Все файлы")
+        flt_all.add_pattern("*")
+        dialog.add_filter(flt_all)
+
+        response = dialog.run()
+        if response == Gtk.ResponseType.OK:
+            filepath = dialog.get_filename()
+            if filepath:
+                ok = save_user_avatar(filepath, CURRENT_USER)
+                if ok:
+                    self.update_profile_avatar_display()
+                    self.refresh_users_list()
+                    self.set_status("Аватар профиля успешно установлен")
+                else:
+                    self.set_status("Ошибка обработки изображения аватара")
+        dialog.destroy()
+
+    def on_reset_avatar_clicked(self, _btn: Gtk.Button) -> None:
+        remove_user_avatar(CURRENT_USER)
+        self.update_profile_avatar_display()
+        self.refresh_users_list()
+        self.set_status("Аватар профиля сброшен")
+
+    def on_toggle_admin(self, username: str, grant: bool) -> None:
+        ok, msg = run_user_admin_cmd("toggle-admin", username, "1" if grant else "0")
+        if ok:
+            self.refresh_users_list()
+            self.set_status(f"Права администратора для '{username}' {'предоставлены' if grant else 'отозваны'}")
+        else:
+            self.set_status(f"Ошибка изменения прав: {msg}")
+
+    def on_create_user_dialog(self, _btn: Gtk.Button | None = None) -> None:
+        dialog = Gtk.Dialog(
+            title="Создание нового пользователя",
+            parent=self,
+            modal=True,
+            destroy_with_parent=True,
+        )
+        dialog.set_default_size(460, 480)
+        add_class(dialog, "control-center-window")
+
+        content_area = dialog.get_content_area()
+        add_class(content_area, "content-area")
+        content_area.set_spacing(12)
+
+        d_title = Gtk.Label(label="Новая учетная запись", xalign=0)
+        add_class(d_title, "page-title")
+        content_area.pack_start(d_title, False, False, 0)
+
+        d_sub = Gtk.Label(
+            label="Создайте профиль для гостя или другого пользователя. Доступ root можно отключить.",
+            xalign=0,
+        )
+        add_class(d_sub, "card-row-subtitle")
+        d_sub.set_line_wrap(True)
+        content_area.pack_start(d_sub, False, False, 0)
+
+        form_card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
+        add_class(form_card, "card")
+
+        # Username
+        u_lbl = Gtk.Label(label="Имя пользователя (логин латиницей):", xalign=0)
+        add_class(u_lbl, "card-row-title")
+        form_card.pack_start(u_lbl, False, False, 0)
+        u_entry = Gtk.Entry()
+        u_entry.set_placeholder_text("например: guest, alex, kids")
+        form_card.pack_start(u_entry, False, False, 0)
+
+        # Fullname
+        fn_lbl = Gtk.Label(label="Отображаемое имя (ФИО / Название):", xalign=0)
+        add_class(fn_lbl, "card-row-title")
+        form_card.pack_start(fn_lbl, False, False, 0)
+        fn_entry = Gtk.Entry()
+        fn_entry.set_placeholder_text("например: Гость или Рабочий профиль")
+        form_card.pack_start(fn_entry, False, False, 0)
+
+        # Shell
+        sh_lbl = Gtk.Label(label="Командная оболочка (Shell):", xalign=0)
+        add_class(sh_lbl, "card-row-title")
+        form_card.pack_start(sh_lbl, False, False, 0)
+        sh_combo = Gtk.ComboBoxText()
+        for sh in ["/bin/bash", "/usr/bin/fish", "/bin/zsh", "/bin/sh"]:
+            sh_combo.append_text(sh)
+        sh_combo.set_active(0)
+        form_card.pack_start(sh_combo, False, False, 0)
+
+        # Passwords
+        p1_lbl = Gtk.Label(label="Пароль:", xalign=0)
+        add_class(p1_lbl, "card-row-title")
+        form_card.pack_start(p1_lbl, False, False, 0)
+        p1_entry = Gtk.Entry()
+        p1_entry.set_visibility(False)
+        form_card.pack_start(p1_entry, False, False, 0)
+
+        p2_lbl = Gtk.Label(label="Повтор пароля:", xalign=0)
+        add_class(p2_lbl, "card-row-title")
+        form_card.pack_start(p2_lbl, False, False, 0)
+        p2_entry = Gtk.Entry()
+        p2_entry.set_visibility(False)
+        form_card.pack_start(p2_entry, False, False, 0)
+
+        # Admin privilege switch
+        form_card.pack_start(self.build_divider(), False, False, 0)
+        adm_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
+        adm_text = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
+        adm_t = Gtk.Label(label="Права администратора (root/sudo)", xalign=0)
+        add_class(adm_t, "card-row-title")
+        adm_s = Gtk.Label(
+            label="Отключите для гостя или безопасного доступа без прав изменять систему.",
+            xalign=0,
+        )
+        add_class(adm_s, "card-row-subtitle")
+        adm_s.set_line_wrap(True)
+        adm_text.pack_start(adm_t, False, False, 0)
+        adm_text.pack_start(adm_s, False, False, 0)
+        adm_row.pack_start(adm_text, True, True, 0)
+
+        adm_switch = Gtk.Switch()
+        adm_switch.set_active(False)
+        adm_switch.set_valign(Gtk.Align.CENTER)
+        adm_row.pack_end(adm_switch, False, False, 0)
+        form_card.pack_start(adm_row, False, False, 0)
+
+        content_area.pack_start(form_card, False, False, 0)
+
+        err_lbl = Gtk.Label(label="", xalign=0)
+        add_class(err_lbl, "card-row-subtitle")
+        err_lbl.set_line_wrap(True)
+        content_area.pack_start(err_lbl, False, False, 0)
+
+        # Buttons
+        dialog.add_button("Отмена", Gtk.ResponseType.CANCEL)
+        create_btn = dialog.add_button("Создать профиль", Gtk.ResponseType.OK)
+        add_class(create_btn, "btn-primary")
+
+        cancel_btn = dialog.get_widget_for_response(Gtk.ResponseType.CANCEL)
+        if cancel_btn:
+            add_class(cancel_btn, "btn-tonal")
+
+        dialog.show_all()
+
+        while True:
+            response = dialog.run()
+            if response != Gtk.ResponseType.OK:
+                dialog.destroy()
+                break
+
+            u_name = u_entry.get_text().strip().lower()
+            if not u_name:
+                err_lbl.set_markup("<span color='#ff6b6b'>Имя пользователя обязательно для заполнения.</span>")
+                continue
+            if not re.match(r"^[a-z_][a-z0-9_-]*$", u_name):
+                err_lbl.set_markup("<span color='#ff6b6b'>Имя пользователя должно состоять из строчных латинских букв, цифр и дефиса.</span>")
+                continue
+
+            p1 = p1_entry.get_text()
+            p2 = p2_entry.get_text()
+            if p1 != p2:
+                err_lbl.set_markup("<span color='#ff6b6b'>Введенные пароли не совпадают.</span>")
+                continue
+
+            fn = fn_entry.get_text().strip()
+            shell = sh_combo.get_active_text() or "/bin/bash"
+            is_adm = "1" if adm_switch.get_active() else "0"
+
+            ok, msg = run_user_admin_cmd("create", u_name, fn, shell, is_adm, p1)
+            if ok:
+                self.refresh_users_list()
+                self.set_status(f"Пользователь '{u_name}' успешно создан")
+                dialog.destroy()
+                break
+            else:
+                err_lbl.set_markup(f"<span color='#ff6b6b'>Ошибка создания: {msg}</span>")
+
+    def on_change_password_dialog(self, username: str) -> None:
+        dialog = Gtk.Dialog(
+            title=f"Смена пароля — {username}",
+            parent=self,
+            modal=True,
+            destroy_with_parent=True,
+        )
+        dialog.set_default_size(400, 260)
+        add_class(dialog, "control-center-window")
+
+        content_area = dialog.get_content_area()
+        add_class(content_area, "content-area")
+        content_area.set_spacing(10)
+
+        d_title = Gtk.Label(label=f"Пароль для {username}", xalign=0)
+        add_class(d_title, "page-title")
+        content_area.pack_start(d_title, False, False, 0)
+
+        card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
+        add_class(card, "card")
+
+        p1_lbl = Gtk.Label(label="Новый пароль:", xalign=0)
+        add_class(p1_lbl, "card-row-title")
+        card.pack_start(p1_lbl, False, False, 0)
+        p1_entry = Gtk.Entry()
+        p1_entry.set_visibility(False)
+        card.pack_start(p1_entry, False, False, 0)
+
+        p2_lbl = Gtk.Label(label="Подтверждение пароля:", xalign=0)
+        add_class(p2_lbl, "card-row-title")
+        card.pack_start(p2_lbl, False, False, 0)
+        p2_entry = Gtk.Entry()
+        p2_entry.set_visibility(False)
+        card.pack_start(p2_entry, False, False, 0)
+
+        content_area.pack_start(card, False, False, 0)
+
+        err_lbl = Gtk.Label(label="", xalign=0)
+        content_area.pack_start(err_lbl, False, False, 0)
+
+        dialog.add_button("Отмена", Gtk.ResponseType.CANCEL)
+        save_btn = dialog.add_button("Сохранить пароль", Gtk.ResponseType.OK)
+        add_class(save_btn, "btn-primary")
+
+        cancel_btn = dialog.get_widget_for_response(Gtk.ResponseType.CANCEL)
+        if cancel_btn:
+            add_class(cancel_btn, "btn-tonal")
+
+        dialog.show_all()
+
+        while True:
+            response = dialog.run()
+            if response != Gtk.ResponseType.OK:
+                dialog.destroy()
+                break
+
+            p1 = p1_entry.get_text()
+            p2 = p2_entry.get_text()
+            if not p1:
+                err_lbl.set_markup("<span color='#ff6b6b'>Пароль не может быть пустым.</span>")
+                continue
+            if p1 != p2:
+                err_lbl.set_markup("<span color='#ff6b6b'>Пароли не совпадают.</span>")
+                continue
+
+            ok, msg = run_user_admin_cmd("set-password", username, p1)
+            if ok:
+                self.set_status(f"Пароль для '{username}' обновлен")
+                dialog.destroy()
+                break
+            else:
+                err_lbl.set_markup(f"<span color='#ff6b6b'>Ошибка: {msg}</span>")
+
+    def on_delete_user_dialog(self, username: str) -> None:
+        dialog = Gtk.Dialog(
+            title=f"Удалить пользователя {username}?",
+            parent=self,
+            modal=True,
+            destroy_with_parent=True,
+        )
+        dialog.set_default_size(440, 220)
+        add_class(dialog, "control-center-window")
+
+        content_area = dialog.get_content_area()
+        add_class(content_area, "content-area")
+        content_area.set_spacing(12)
+
+        d_title = Gtk.Label(label="Подтверждение удаления", xalign=0)
+        add_class(d_title, "page-title")
+        content_area.pack_start(d_title, False, False, 0)
+
+        card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
+        add_class(card, "card")
+
+        msg_lbl = Gtk.Label(
+            label=f"Вы действительно хотите удалить учетную запись '{username}'?",
+            xalign=0,
+        )
+        add_class(msg_lbl, "card-row-title")
+        card.pack_start(msg_lbl, False, False, 0)
+
+        chk_del_home = Gtk.CheckButton(label=f"Удалить домашнюю папку (/home/{username}) и все файлы")
+        chk_del_home.set_active(True)
+        card.pack_start(chk_del_home, False, False, 0)
+
+        content_area.pack_start(card, False, False, 0)
+
+        dialog.add_button("Отмена", Gtk.ResponseType.CANCEL)
+        del_btn = dialog.add_button("Удалить пользователя", Gtk.ResponseType.OK)
+        add_class(del_btn, "btn-danger")
+
+        cancel_btn = dialog.get_widget_for_response(Gtk.ResponseType.CANCEL)
+        if cancel_btn:
+            add_class(cancel_btn, "btn-tonal")
+
+        dialog.show_all()
+        response = dialog.run()
+
+        if response == Gtk.ResponseType.OK:
+            del_home = "1" if chk_del_home.get_active() else "0"
+            ok, msg = run_user_admin_cmd("delete", username, del_home)
+            if ok:
+                self.refresh_users_list()
+                self.set_status(f"Пользователь '{username}' удален")
+            else:
+                self.set_status(f"Ошибка удаления: {msg}")
+
+        dialog.destroy()
+
+    # --------------------------------------------------------------------------
+    # Page 9: About System
     # --------------------------------------------------------------------------
     def build_about_page(self) -> Gtk.Widget:
         scrolled = Gtk.ScrolledWindow()

@@ -1,0 +1,36 @@
+/* EWW Style for 🌆 Tokyo Cyber (Neon Cyberpunk) */
+.bar-container {
+  background-color: rgba(#0a0b10, 0.96);
+  border-bottom: 2px solid #00f0ff;
+  box-shadow: 0 0 10px rgba(0, 240, 255, 0.3);
+}
+.bottom-bar {
+  border-top: 2px solid #ff007f;
+  box-shadow: 0 0 10px rgba(255, 0, 127, 0.3);
+}
+.chip {
+  border-radius: 2px;
+  background-color: rgba(#161824, 0.85);
+  border: 1px solid rgba(#00f0ff, 0.5);
+  box-shadow: 0 0 6px rgba(0, 240, 255, 0.2);
+}
+.chip:hover {
+  background-color: rgba(#00f0ff, 0.2);
+  border-color: #00f0ff;
+}
+.ws-btn {
+  border-radius: 2px;
+}
+.ws-btn.focused {
+  background-color: #00f0ff;
+  color: #000000;
+  font-weight: 900;
+  box-shadow: 0 0 10px #00f0ff;
+}
+.ws-btn.occupied {
+  color: #ff007f;
+}
+.task-btn.active {
+  background-color: rgba(#ff007f, 0.3);
+  border-bottom: 2px solid #ff007f;
+}

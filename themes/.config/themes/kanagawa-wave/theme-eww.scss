@@ -1,0 +1,32 @@
+/* EWW Style for 🌊 Kanagawa Wave (Japanese Oceanic Ink) */
+.bar-container {
+  background-color: rgba(#1f1f28, 0.96);
+  border-bottom: 2px solid rgba(#7e9cd8, 0.6);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+}
+.bottom-bar {
+  border-top: 2px solid rgba(#7e9cd8, 0.6);
+}
+.chip {
+  border-radius: 6px;
+  background-color: rgba(#2a2a37, 0.8);
+  border: 1px solid rgba(#7e9cd8, 0.35);
+  color: #dcd7ba;
+}
+.chip:hover {
+  background-color: rgba(#7e9cd8, 0.25);
+  border-color: #7e9cd8;
+}
+.ws-btn.focused {
+  background-color: #7e9cd8;
+  color: #1f1f28;
+  border-radius: 5px;
+  font-weight: bold;
+}
+.ws-btn.occupied {
+  color: #957fb8;
+}
+.task-btn.active {
+  background-color: rgba(#e46876, 0.3);
+  border-bottom: 2px solid #e46876;
+}

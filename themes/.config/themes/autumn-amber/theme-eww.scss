@@ -1,0 +1,27 @@
+/* EWW Style for 🍁 Autumn Amber (Golden Maple) */
+.bar-container {
+  background-color: rgba($color0, 0.94);
+  border-bottom: 2px solid rgba($color3, 0.6);
+}
+.bottom-bar {
+  border-top: 2px solid rgba($color3, 0.6);
+}
+.chip {
+  border-radius: 8px;
+  background-color: rgba($color8, 0.25);
+  border: 1px solid rgba($color3, 0.4);
+}
+.chip:hover {
+  background-color: rgba($color3, 0.25);
+  border-color: $color3;
+}
+.ws-btn.focused {
+  background-color: $color3;
+  color: $color0;
+  border-radius: 6px;
+  font-weight: bold;
+}
+.task-btn.active {
+  background-color: rgba($color1, 0.35);
+  border-bottom: 2px solid $color1;
+}

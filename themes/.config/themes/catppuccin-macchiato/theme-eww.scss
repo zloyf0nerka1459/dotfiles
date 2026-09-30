@@ -1,0 +1,32 @@
+/* EWW Style for 🍨 Catppuccin Macchiato */
+.bar-container {
+  background-color: rgba(#24273a, 0.95);
+  border-bottom: 2px solid rgba(#c6a0f6, 0.5);
+}
+.bottom-bar {
+  border-top: 2px solid rgba(#c6a0f6, 0.5);
+}
+.chip {
+  border-radius: 10px;
+  background-color: rgba(#363a4f, 0.7);
+  border: 1px solid rgba(#8aadf4, 0.35);
+  color: #cad3f5;
+}
+.chip:hover {
+  background-color: rgba(#c6a0f6, 0.25);
+  border-color: #c6a0f6;
+}
+.ws-btn.focused {
+  background-color: #c6a0f6;
+  color: #181926;
+  border-radius: 8px;
+  font-weight: bold;
+}
+.ws-btn.occupied {
+  color: #8aadf4;
+}
+.task-btn.active {
+  background-color: rgba(#c6a0f6, 0.25);
+  border-radius: 6px;
+  color: #f4dbd6;
+}

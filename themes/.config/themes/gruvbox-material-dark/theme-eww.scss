@@ -1,0 +1,31 @@
+/* EWW Style for 🍂 Gruvbox Material Dark (Retro Warmth) */
+.bar-container {
+  background-color: rgba(#282828, 0.96);
+  border-bottom: 2px solid #d79921;
+}
+.bottom-bar {
+  border-top: 2px solid #d79921;
+}
+.chip {
+  border-radius: 6px;
+  background-color: rgba(#3c3836, 0.85);
+  border: 1px solid #504945;
+  color: #ebdbb2;
+}
+.chip:hover {
+  background-color: rgba(#d79921, 0.25);
+  border-color: #d79921;
+}
+.ws-btn.focused {
+  background-color: #d79921;
+  color: #282828;
+  border-radius: 5px;
+  font-weight: bold;
+}
+.ws-btn.occupied {
+  color: #fe8019;
+}
+.task-btn.active {
+  background-color: rgba(#fe8019, 0.25);
+  border-bottom: 2px solid #fe8019;
+}

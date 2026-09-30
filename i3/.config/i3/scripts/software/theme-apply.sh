@@ -115,7 +115,22 @@ if command -v kitty >/dev/null 2>&1; then
     killall -SIGUSR1 kitty 2>/dev/null || true
 fi
 
-# 6. Reload EWW widgets and bars with new palette
+# 6. Apply theme-specific EWW bar styles and reload widgets
+THEME_DIR=""
+if [ -d "$TARGET" ]; then
+    THEME_DIR="$TARGET"
+elif [ -f "$TARGET" ]; then
+    THEME_DIR="$(dirname "$TARGET")"
+fi
+
+if [ -n "$THEME_DIR" ] && [ -f "$THEME_DIR/theme-eww.scss" ]; then
+    cp -f "$THEME_DIR/theme-eww.scss" "$HOME/.config/eww/theme-override.scss"
+elif [ -n "$THEME_DIR" ] && [ -f "$THEME_DIR/eww.scss" ]; then
+    cp -f "$THEME_DIR/eww.scss" "$HOME/.config/eww/theme-override.scss"
+else
+    echo "/* Default theme - no custom EWW overrides */" > "$HOME/.config/eww/theme-override.scss"
+fi
+
 if [ -x "$HOME/.config/eww/launch.sh" ]; then
     "$HOME/.config/eww/launch.sh" >/dev/null 2>&1 &
 elif command -v eww >/dev/null 2>&1; then

@@ -61,6 +61,41 @@ author="$(whoami)"
 created_at="$(date '+%Y-%m-%d %H:%M:%S')"
 EOF
 
+# 4. Create starter theme-eww.scss template
+cat << 'EOF' > "$TARGET_DIR/theme-eww.scss"
+/* ==============================================================================
+ * Custom EWW Style for this Theme
+ * You can customize top and bottom bars, chips, and workspaces!
+ * Available colors: $background, $foreground, $color0..$color15, $accent
+ * ============================================================================== */
+.bar-container {
+  background-color: rgba($color0, 0.94);
+  border-bottom: 2px solid rgba($color4, 0.5);
+}
+.bottom-bar {
+  border-top: 2px solid rgba($color4, 0.5);
+}
+.chip {
+  border-radius: 8px;
+  background-color: rgba($color8, 0.22);
+  border: 1px solid rgba($color4, 0.35);
+}
+.chip:hover {
+  background-color: rgba($color4, 0.25);
+  border-color: $color4;
+}
+.ws-btn.focused {
+  background-color: $color4;
+  color: $color0;
+  border-radius: 6px;
+  font-weight: bold;
+}
+.task-btn.active {
+  background-color: rgba($color4, 0.3);
+  border-bottom: 2px solid $color4;
+}
+EOF
+
 echo "✅ Тема успешно создана: $TARGET_DIR"
 echo "   Название: $THEME_NAME"
 echo "   Обои: $TARGET_DIR/wall.$EXT"

@@ -823,3 +823,6 @@ calendar.highlight,
   font-size: 13px;
   padding-right: 4px;
 }
+
+// Dynamic Theme Specific Overrides
+@import "theme-override.scss";
