@@ -234,7 +234,7 @@
             (box :orientation "h" :space-evenly false :spacing 14
               ;; Hero Icon with breathing room
               (box :class "weather-icon-box" :valign "center" :halign "center"
-                (label :class "weather-hero-icon" :text {weather_data.icon}))
+                (label :class "weather-hero-icon" :halign "center" :valign "center" :text {weather_data.icon}))
               ;; Details column (temperature & description cleanly to the right)
               (box :orientation "v" :space-evenly false :spacing 2 :valign "center" :hexpand true
                 (box :orientation "h" :space-evenly false :spacing 8
