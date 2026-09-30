@@ -243,22 +243,22 @@
                 (box :orientation "h" :space-evenly false :spacing 8
                   (label :class "weather-desc" :halign "start" :text {weather_data.desc})
                   (label :class "weather-feels" :valign "center" :text "Ощущ. ${weather_data.feels_like}"))))
-            ;; 4 Weather Pills Row
-            (box :class "weather-details-row" :orientation "h" :space-evenly true :spacing 4
-              (box :class "m3-chip" :space-evenly false :spacing 3 :halign "center"
+            ;; 4 Weather Pills Row (Grouped, left-aligned, no voids)
+            (box :class "weather-details-row" :orientation "h" :space-evenly false :spacing 6 :halign "start"
+              (box :class "m3-chip" :space-evenly false :spacing 3 :halign "start"
                 (label :class "m3-chip-icon" :text "")
                 (label :class "m3-chip-text" :text {weather_data.humidity}))
-              (box :class "m3-chip" :space-evenly false :spacing 3 :halign "center"
+              (box :class "m3-chip" :space-evenly false :spacing 3 :halign "start"
                 (label :class "m3-chip-icon" :text "")
                 (label :class "m3-chip-text" :text {weather_data.wind}))
-              (box :class "m3-chip" :space-evenly false :spacing 3 :halign "center"
+              (box :class "m3-chip" :space-evenly false :spacing 3 :halign "start"
                 (label :class "m3-chip-icon" :text "")
                 (label :class "m3-chip-text" :text {weather_data.today_range}))
-              (box :class "m3-chip" :space-evenly false :spacing 3 :halign "center" :tooltip "Завтра: ${weather_data.tomorrow_temp}, ${weather_data.tomorrow_desc}"
+              (box :class "m3-chip" :space-evenly false :spacing 3 :halign "start" :tooltip "Завтра: ${weather_data.tomorrow_temp}, ${weather_data.tomorrow_desc}"
                 (label :class "m3-chip-icon" :text {weather_data.tomorrow_icon})
                 (label :class "m3-chip-text" :text {weather_data.tomorrow_temp}))))
 
-          ;; 2. Profile & Greeting Card (Clean, non-duplicate motto, compact start-aligned chips)
+          ;; 2. Profile & Greeting Card (Clean, personal status & settings)
           (box :class "card profile-card m3-card" :orientation "v" :space-evenly false :spacing 8 :width 355
             (box :orientation "h" :space-evenly false :spacing 12
               (button :class "profile-avatar-btn" :onclick "~/.config/system-control-center/launch.sh profile & eww close dashboard" :tooltip "Настройки профиля и выбор аватарки"
@@ -268,59 +268,33 @@
               (box :orientation "v" :space-evenly false :spacing 3 :valign "center" :hexpand true
                 (label :class "profile-title" :halign "start" :text {profile_data.title})
                 (label :class "profile-greeting" :halign "start" :wrap true :text {profile_data.greeting})))
-            (box :class "profile-badges" :orientation "h" :space-evenly false :spacing 6 :halign "start"
-              (box :class "m3-chip sys-chip" :space-evenly false :spacing 4 :halign "start"
-                (label :class "sys-icon arch-icon" :text "󰣇")
-                (label :class "m3-chip-text" :text "Arch"))
-              (box :class "m3-chip sys-chip" :space-evenly false :spacing 4 :halign "start"
-                (label :class "sys-icon wm-icon" :text "")
-                (label :class "m3-chip-text" :text "i3wm"))
-              (box :class "m3-chip sys-chip" :space-evenly false :spacing 4 :halign "start"
-                (label :class "sys-icon time-icon" :text "")
-                (label :class "m3-chip-text" :text {profile_data.uptime}))
-              (box :class "m3-chip sys-chip" :space-evenly false :spacing 4 :halign "start"
-                (label :class "sys-icon host-icon" :text "󰌢")
-                (label :class "m3-chip-text" :text {profile_data.kernel})))))
+            (box :class "profile-actions-row" :orientation "h" :space-evenly false :spacing 6 :halign "start"
+              (button :class "profile-open-btn" :onclick "~/.config/system-control-center/launch.sh profile & eww close dashboard" :tooltip "Открыть центр управления профилем"
+                (box :orientation "h" :space-evenly false :spacing 5
+                  (label :class "profile-open-icon" :text "󰒓")
+                  (label :class "profile-open-text" :text "Параметры профиля"))))))
 
-        ;; Bottom Row (Clock, Calendar, Quick Controls)
+        ;; Bottom Row (Clock & Date Card + Calendar Card) - Symmetrical 2x2 Bento Grid
         (box :orientation "h" :space-evenly false :spacing 10
-          ;; 1. Vertical Clock & Date Card
-          (box :class "card clock-vertical-card m3-card" :orientation "v" :space-evenly false :spacing 6 :width 125 :halign "center"
-            (box :orientation "v" :space-evenly false :spacing 0 :halign "center" :valign "center" :class "vertical-time-box"
-              (label :class "vert-clock-digits" :text time_hour)
-              (label :class "vert-clock-dots" :text "••")
-              (label :class "vert-clock-digits" :text time_min))
-            (box :orientation "v" :space-evenly false :spacing 1 :halign "center" :class "vertical-date-box"
-              (label :class "vert-date-day" :text date_day_name)
-              (label :class "vert-date-sub" :text date_short_str)))
+          ;; 1. Bento Clock & Date Card
+          (box :class "card clock-card m3-card" :orientation "v" :space-evenly false :spacing 6 :width 355
+            (box :orientation "h" :space-evenly false :spacing 6 :valign "start"
+              (box :class "m3-chip" :space-evenly false :spacing 4 :halign "start"
+                (label :class "m3-chip-icon" :text "")
+                (label :class "m3-chip-text" :text "UTC+7 • Новосибирск")))
+            (box :orientation "v" :space-evenly false :spacing 4 :halign "center" :valign "center" :vexpand true
+              (box :orientation "h" :space-evenly false :spacing 4 :halign "center"
+                (label :class "clock-digits-big" :text time_hour)
+                (label :class "clock-dots-big" :text ":")
+                (label :class "clock-digits-big" :text time_min))
+              (box :orientation "h" :space-evenly false :spacing 6 :halign "center"
+                (label :class "clock-day-name" :text date_day_name)
+                (label :class "clock-sep-dot" :text "•")
+                (label :class "clock-full-date" :text date_short_str))))
 
           ;; 2. Calendar Card
-          (box :class "card cal-card m3-card" :orientation "v" :space-evenly false :hexpand true
-            (calendar :class "cal"))
-
-          ;; 3. Quick Control Sliders / Meters Card
-          (box :class "card quick-meters-card m3-card" :orientation "v" :space-evenly false :spacing 8 :width 220
-            (label :class "meters-title" :text "Управление" :halign "start")
-            ;; Volume slider
-            (box :orientation "v" :space-evenly false :spacing 2
-              (box :orientation "h" :space-evenly false
-                (label :class "meter-label" :text "Громкость" :halign "start")
-                (label :class "meter-val" :hexpand true :halign "end" :text "${volume_data.volume}%"))
-              (scale :class "meter-slider vol-slider"
-                     :min 0 :max 100 :value {volume_data.volume}
-                     :onchange "amixer -D pulse set Master {}%"))
-            ;; CPU bar
-            (box :orientation "v" :space-evenly false :spacing 2
-              (box :orientation "h" :space-evenly false
-                (label :class "meter-label" :text "CPU" :halign "start")
-                (label :class "meter-val" :hexpand true :halign "end" :text "${round(EWW_CPU.avg, 0)}%"))
-              (progress :class "meter-bar cpu-bar" :value {round(EWW_CPU.avg, 0)}))
-            ;; RAM bar
-            (box :orientation "v" :space-evenly false :spacing 2
-              (box :orientation "h" :space-evenly false
-                (label :class "meter-label" :text "RAM" :halign "start")
-                (label :class "meter-val" :hexpand true :halign "end" :text "${round(EWW_RAM.used_mem_perc, 0)}%"))
-              (progress :class "meter-bar ram-bar" :value {round(EWW_RAM.used_mem_perc, 0)})))))
+          (box :class "card cal-card m3-card" :orientation "v" :space-evenly false :width 355 :hexpand true
+            (calendar :class "cal"))))
 
       ;; TAB 2: Dedicated Media Suite
       (box :orientation "v" :space-evenly false :spacing 10 :class "dash-view-box"

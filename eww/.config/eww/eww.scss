@@ -464,25 +464,27 @@ button.power-standalone-btn:hover .power-icon,
   color: rgba($foreground, 0.85);
 }
 
-.sys-chip {
-  background-color: rgba($color8, 0.24);
+.profile-open-btn {
+  background-color: rgba($color8, 0.28);
+  border-radius: 9999px;
+  padding: 3px 10px;
+  transition: all 0.15s ease;
+
+  &:hover {
+    background-color: rgba($accent, 0.2);
+  }
 }
 
-.sys-icon {
+.profile-open-icon {
   font-size: 11px;
   color: $accent;
+  margin-right: 4px;
 }
 
-.arch-icon {
-  color: #1793d1;
-}
-
-.wm-icon {
-  color: $color6;
-}
-
-.time-icon {
-  color: $accent;
+.profile-open-text {
+  font-size: 10px;
+  font-weight: 500;
+  color: rgba($foreground, 0.9);
 }
 
 /* Media Player Card */
@@ -609,40 +611,40 @@ progressbar {
   background-color: $color3;
 }
 
-/* Vertical Clock Card */
-.clock-vertical-card {
-  padding: 10px 8px;
+/* Bento Clock & Date Card */
+.clock-card {
+  padding: 10px 14px;
 }
 
-.vertical-time-box {
-  margin-top: 4px;
-}
-
-.vert-clock-digits {
-  font-size: 26px;
+.clock-digits-big {
+  font-size: 38px;
   font-weight: 900;
   color: $foreground;
+  letter-spacing: -1px;
 }
 
-.vert-clock-dots {
-  font-size: 13px;
+.clock-dots-big {
+  font-size: 32px;
+  font-weight: 800;
   color: $accent;
-  margin: -2px 0;
+  margin: 0 2px;
 }
 
-.vertical-date-box {
-  margin-top: 6px;
-}
-
-.vert-date-day {
-  font-size: 12px;
-  font-weight: bold;
+.clock-day-name {
+  font-size: 13.5px;
+  font-weight: 700;
   color: $accent;
 }
 
-.vert-date-sub {
-  font-size: 10px;
-  color: rgba($foreground, 0.7);
+.clock-sep-dot {
+  font-size: 11px;
+  color: rgba($foreground, 0.4);
+}
+
+.clock-full-date {
+  font-size: 11.5px;
+  font-weight: 500;
+  color: rgba($foreground, 0.75);
 }
 
 /* Quick Meters Card */
