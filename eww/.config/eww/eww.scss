@@ -289,16 +289,17 @@ button.power-standalone-btn:hover .power-icon,
 
 /* Popups Common */
 .popup-box {
-  background-color: rgba($background, 0.96);
-  border: 1px solid rgba($accent, 0.3);
+  background-color: $background;
+  border: 1px solid rgba($accent, 0.35);
   border-radius: 20px;
   padding: 14px;
 }
 
 /* Material Design 3 Dashboard */
 .dashboard-box {
+  background-color: $background;
   padding: 14px;
-  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.45);
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.55);
 }
 
 /* M3 Tab Navigation */
@@ -711,7 +712,7 @@ progressbar {
 
 /* Expanded Media Tab */
 .expanded-media-card {
-  padding: 16px 20px;
+  padding: 24px 28px;
 }
 
 .expanded-art-frame {
@@ -759,6 +760,16 @@ progressbar {
   }
 }
 
+.media-player-pill {
+  font-size: 10px;
+  font-weight: 600;
+  color: $accent;
+  background-color: rgba($accent, 0.12);
+  border: 1px solid rgba($accent, 0.3);
+  border-radius: 9999px;
+  padding: 2px 8px;
+}
+
 .media-album-chip {
   font-size: 10px;
   color: rgba($foreground, 0.65);
@@ -768,12 +779,12 @@ progressbar {
 }
 
 .media-ctrl-row {
-  margin-top: 6px;
+  margin-top: 8px;
 }
 
 .btn-circle {
-  min-width: 36px;
-  min-height: 36px;
+  min-width: 40px;
+  min-height: 40px;
   border-radius: 9999px;
   background-color: rgba($color8, 0.3);
   color: $foreground;
@@ -783,7 +794,7 @@ progressbar {
   transition: all 0.15s ease;
 
   label {
-    font-size: 15px;
+    font-size: 16px;
     padding: 0;
     margin: 0;
   }
@@ -796,22 +807,30 @@ progressbar {
 }
 
 .media-btn-play {
-  min-width: 50px;
-  min-height: 50px;
+  min-width: 54px;
+  min-height: 54px;
   border-radius: 9999px;
   background-color: $accent;
   color: $background;
   padding: 0;
-  margin: 0;
+  margin: 0 4px;
   border: none;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
   transition: all 0.15s ease;
 
   label {
-    font-size: 20px;
+    font-size: 22px;
     font-weight: bold;
     padding: 0;
     margin: 0;
+  }
+
+  label.icon-play {
+    margin-left: 2px;
+  }
+
+  label.icon-pause {
+    margin-left: 0;
   }
 
   &:hover {

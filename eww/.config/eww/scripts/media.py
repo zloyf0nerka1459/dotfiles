@@ -187,7 +187,7 @@ def resolve_cover_art(art_url, web_url, artist="", title=""):
 def get_media_data():
     raw, code = run_cmd([
         'playerctl', 'metadata', '--format',
-        '{{status}}|||{{xesam:title}}|||{{xesam:artist}}|||{{xesam:album}}|||{{mpris:artUrl}}|||{{mpris:length}}|||{{xesam:url}}'
+        '{{status}}|||{{xesam:title}}|||{{xesam:artist}}|||{{xesam:album}}|||{{mpris:artUrl}}|||{{mpris:length}}|||{{xesam:url}}|||{{playerName}}'
     ])
     
     if code != 0 or not raw:
@@ -196,8 +196,11 @@ def get_media_data():
             "status_icon": "󰐊",
             "is_playing": False,
             "title": "Нет трека",
-            "artist": "Воспроизведение остановлено",
+            "full_title": "Воспроизведение остановлено",
+            "artist": "Запустите плеер",
             "album": "",
+            "player_name": "",
+            "player_icon": "󰝚",
             "cover_art": DEFAULT_COVER if os.path.exists(DEFAULT_COVER) else "",
             "position": 0,
             "position_str": "00:00",
@@ -214,6 +217,28 @@ def get_media_data():
     art_url = parts[4] if len(parts) > 4 else ""
     raw_length = parts[5] if len(parts) > 5 else ""
     web_url = parts[6] if len(parts) > 6 else ""
+    player_raw = parts[7] if len(parts) > 7 else ""
+
+    player_name = ""
+    player_icon = "󰝚"
+    p_lower = player_raw.lower()
+    if "forkgram" in p_lower or "telegram" in p_lower:
+        player_name = "Telegram"
+        player_icon = "󰀰"
+    elif "firefox" in p_lower or "zen" in p_lower:
+        player_name = "Zen Browser"
+        player_icon = "󰈹"
+    elif "spotify" in p_lower:
+        player_name = "Spotify"
+        player_icon = "󰓇"
+    elif "mpv" in p_lower:
+        player_name = "MPV"
+        player_icon = "󰕼"
+    elif "chromium" in p_lower or "chrome" in p_lower:
+        player_name = "Chrome"
+        player_icon = "󰊯"
+    elif player_raw:
+        player_name = player_raw.split('.')[0].capitalize()
 
     # Length in seconds
     length_sec = 0.0
@@ -271,6 +296,8 @@ def get_media_data():
         "full_title": title,
         "artist": clean_artist,
         "album": album,
+        "player_name": player_name,
+        "player_icon": player_icon,
         "cover_art": cover_art,
         "position": round(pos_sec, 1),
         "position_str": format_time(pos_sec),

@@ -224,7 +224,7 @@
           (label :class "dash-tab-icon" :text "󰓅")
           (label :class "dash-tab-label" :text "Система"))))
 
-    (box :orientation "v" :space-evenly false :spacing 0
+    (stack :selected {dash_tab == "dashboard" ? 0 : (dash_tab == "media" ? 1 : 2)} :transition "none"
       ;; TAB 1: Bento Dashboard (Default & Primary View)
       (box :orientation "v" :space-evenly false :spacing 10 :class "dash-view-box" :visible {dash_tab == "dashboard"}
         ;; Top Row (Weather & Profile)
@@ -297,20 +297,23 @@
             (calendar :class "cal"))))
 
       ;; TAB 2: Dedicated Media Suite
-      (box :orientation "v" :space-evenly false :spacing 10 :class "dash-view-box" :visible {dash_tab == "media"}
-        ;; Row 1: Main Media Studio Card
-        (box :class "card expanded-media-card m3-card" :orientation "h" :space-evenly false :spacing 20
+      (box :orientation "v" :space-evenly false :spacing 10 :class "dash-view-box" :valign "center" :vexpand true
+        ;; Main Media Studio Card
+        (box :class "card expanded-media-card m3-card" :orientation "h" :space-evenly false :spacing 24 :valign "center"
           ;; Album Art Frame
           (box :class "expanded-art-frame" :valign "center" :halign "center"
             (image :path {media_data.cover_art != "" ? media_data.cover_art : "/home/fonera/.config/eww/assets/default_cover.png"}
-                   :image-width 136 :image-height 136 :class "expanded-art-img"))
+                   :image-width 164 :image-height 164 :class "expanded-art-img"))
           ;; Track Info & Controls
           (box :orientation "v" :space-evenly false :spacing 8 :hexpand true :valign "center"
             (box :orientation "v" :space-evenly false :spacing 2
-              (box :orientation "h" :space-evenly false :spacing 8
-                (label :class {media_data.is_playing ? "media-status-pill playing" : "media-status-pill paused"}
-                       :text {media_data.is_playing ? "󰐊 Играет" : "󰏤 Пауза"})
-                (label :class "media-album-chip" :visible {media_data.album != ""} :limit-width 24 :text {media_data.album}))
+              (box :orientation "h" :space-evenly false :spacing 6
+                (box :class {media_data.is_playing ? "media-status-pill playing" : "media-status-pill paused"} :space-evenly false :spacing 4
+                  (label :text {media_data.is_playing ? "󰐊 Играет" : "󰏤 Пауза"}))
+                (box :class "media-player-pill" :space-evenly false :spacing 4 :visible {media_data.player_name != ""}
+                  (label :text "${media_data.player_icon} ${media_data.player_name}"))
+                (box :class "media-album-chip" :space-evenly false :spacing 4 :visible {media_data.album != ""}
+                  (label :limit-width 22 :text {media_data.album})))
               (label :class "expanded-media-title" :halign "start" :wrap true :limit-width 36 :text {media_data.full_title})
               (label :class "expanded-media-artist" :halign "start" :limit-width 36 :text {media_data.artist}))
             ;; Scrubber
@@ -322,53 +325,17 @@
                 (label :class "media-time" :halign "start" :text {media_data.position_str})
                 (label :class "media-time" :hexpand true :halign "end" :text {media_data.length_str})))
             ;; Perfectly circular control buttons!
-            (box :orientation "h" :space-evenly false :spacing 14 :halign "center" :valign "center" :class "media-ctrl-row"
-              (button :class "btn-circle" :onclick "~/.config/eww/scripts/media.py --rewind 10" :tooltip "-10 сек"
-                (label :text "󰕌" :halign "center" :valign "center"))
-              (button :class "btn-circle" :onclick "~/.config/eww/scripts/media.py --prev" :tooltip "Предыдущий трек"
+            (box :orientation "h" :space-evenly false :spacing 12 :halign "center" :valign "center" :class "media-ctrl-row"
+              (button :class "btn-circle" :valign "center" :halign "center" :onclick "~/.config/eww/scripts/media.py --rewind 10" :tooltip "-10 сек"
+                (label :text "󰑟" :halign "center" :valign "center"))
+              (button :class "btn-circle" :valign "center" :halign "center" :onclick "~/.config/eww/scripts/media.py --prev" :tooltip "Предыдущий трек"
                 (label :text "󰒮" :halign "center" :valign "center"))
-              (button :class "media-btn-play" :onclick "~/.config/eww/scripts/media.py --toggle" :tooltip "Воспроизведение / Пауза"
-                (label :text {media_data.status_icon} :halign "center" :valign "center"))
-              (button :class "btn-circle" :onclick "~/.config/eww/scripts/media.py --next" :tooltip "Следующий трек"
+              (button :class "media-btn-play" :valign "center" :halign "center" :onclick "~/.config/eww/scripts/media.py --toggle" :tooltip "Воспроизведение / Пауза"
+                (label :class {media_data.is_playing ? "icon-pause" : "icon-play"} :text {media_data.status_icon} :halign "center" :valign "center"))
+              (button :class "btn-circle" :valign "center" :halign "center" :onclick "~/.config/eww/scripts/media.py --next" :tooltip "Следующий трек"
                 (label :text "󰒭" :halign "center" :valign "center"))
-              (button :class "btn-circle" :onclick "~/.config/eww/scripts/media.py --forward 10" :tooltip "+10 сек"
-                (label :text "󰕎" :halign "center" :valign "center")))))
-
-        ;; Row 2: Media Audio Controls & Track Specs
-        (box :orientation "h" :space-evenly false :spacing 10
-          ;; Card 1: Audio Volume Control
-          (box :class "card m3-card" :orientation "v" :space-evenly false :spacing 8 :width 355
-            (box :orientation "h" :space-evenly false :spacing 6
-              (label :class "perf-icon" :text "󰕾")
-              (label :class "perf-name" :text "Уровень звука"))
-            (box :orientation "v" :space-evenly false :spacing 3
-              (box :orientation "h" :space-evenly false
-                (label :class "meter-label" :text "Громкость" :halign "start")
-                (label :class "meter-val" :hexpand true :halign "end" :text "${volume_data.volume}%"))
-              (scale :class "meter-slider vol-slider"
-                     :min 0 :max 100 :value {volume_data.volume}
-                     :onchange "amixer -D pulse set Master {}%"))
-            (box :orientation "h" :space-evenly true :spacing 6
-              (button :class "media-preset-btn" :onclick "pamixer -t" (label :text "󰝟 Мут"))
-              (button :class "media-preset-btn" :onclick "amixer -D pulse set Master 25%" (label :text "25%"))
-              (button :class "media-preset-btn" :onclick "amixer -D pulse set Master 50%" (label :text "50%"))
-              (button :class "media-preset-btn" :onclick "amixer -D pulse set Master 75%" (label :text "75%"))
-              (button :class "media-preset-btn" :onclick "amixer -D pulse set Master 100%" (label :text "100%"))))
-
-          ;; Card 2: Media Track Details
-          (box :class "card m3-card" :orientation "v" :space-evenly false :spacing 6 :width 355
-            (box :orientation "h" :space-evenly false :spacing 6
-              (label :class "perf-icon" :text "󰎈")
-              (label :class "perf-name" :text "Параметры потока"))
-            (box :class "media-detail-item" :orientation "h" :space-evenly false
-              (label :class "detail-title" :text "Состояние:" :halign "start")
-              (label :class "detail-val" :hexpand true :halign "end" :text {media_data.is_playing ? "Воспроизведение" : "Остановлено"}))
-            (box :class "media-detail-item" :orientation "h" :space-evenly false
-              (label :class "detail-title" :text "Позиция:" :halign "start")
-              (label :class "detail-val" :hexpand true :halign "end" :text "${media_data.position_str} / ${media_data.length_str}"))
-            (box :class "media-detail-item" :orientation "h" :space-evenly false
-              (label :class "detail-title" :text "Альбом:" :halign "start")
-              (label :class "detail-val" :hexpand true :halign "end" :limit-width 22 :text {media_data.album != "" ? media_data.album : "Отсутствует"})))))
+              (button :class "btn-circle" :valign "center" :halign "center" :onclick "~/.config/eww/scripts/media.py --forward 10" :tooltip "+10 сек"
+                (label :text "󰈑" :halign "center" :valign "center"))))))
 
       ;; TAB 3: Functional System Hub
       (box :orientation "v" :space-evenly false :spacing 10 :class "dash-view-box" :visible {dash_tab == "performance"}
