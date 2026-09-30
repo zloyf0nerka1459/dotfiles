@@ -289,52 +289,92 @@ button.power-standalone-btn:hover .power-icon,
 
 /* Popups Common */
 .popup-box {
-  background-color: $background;
-  border: 2px solid $mantle;
-  border-radius: 10px;
-  padding: 16px;
+  background-color: rgba($background, 0.96);
+  border: 1px solid rgba($accent, 0.3);
+  border-radius: 20px;
+  padding: 14px;
 }
 
-/* Dashboard Popup */
+/* Material Design 3 Dashboard */
 .dashboard-box {
-  padding: 12px;
+  padding: 14px;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.45);
 }
 
-.card {
-  background-color: rgba($color8, 0.18);
+/* M3 Tab Navigation */
+.dash-nav {
+  background-color: rgba($color8, 0.16);
   border: 1px solid rgba($color8, 0.35);
-  border-radius: 8px;
-  padding: 10px 12px;
+  border-radius: 9999px;
+  padding: 3px 6px;
+  margin-bottom: 2px;
 }
 
-/* Time Card */
-.time-card {
-  padding: 10px 12px;
+.dash-tab-btn {
+  padding: 4px 14px;
+  border-radius: 9999px;
+  color: rgba($foreground, 0.75);
+  font-size: 11px;
+  font-weight: 500;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.clock-box {
-  padding: 0;
-}
-
-.clock-large {
-  font-size: 34px;
-  font-weight: 900;
-  color: $accent;
-}
-
-.clock-seconds {
-  font-size: 15px;
-  font-weight: bold;
-  color: $mantle;
-  margin-top: 14px;
-  margin-left: 2px;
-}
-
-.clock-date {
-  font-size: 13px;
-  font-weight: bold;
+.dash-tab-btn:hover {
   color: $foreground;
-  margin-top: 2px;
+  background-color: rgba($color4, 0.15);
+}
+
+.dash-tab-btn.active {
+  background-color: $accent;
+  color: $background;
+  font-weight: bold;
+}
+
+.dash-tab-icon {
+  font-size: 13px;
+  margin-right: 4px;
+}
+
+.dash-tab-label {
+  font-size: 11px;
+}
+
+.dash-view-box {
+  transition: all 0.25s ease;
+}
+
+/* Base M3 Card */
+.card,
+.m3-card {
+  background-color: rgba($color8, 0.16);
+  border: 1px solid rgba($color8, 0.32);
+  border-radius: 16px;
+  padding: 10px 12px;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.m3-card:hover {
+  background-color: rgba($color8, 0.24);
+  border-color: rgba($accent, 0.45);
+}
+
+/* M3 Chips / Pills */
+.m3-chip {
+  padding: 2px 5px;
+  border-radius: 9999px;
+  background-color: rgba($color8, 0.28);
+  font-size: 9.5px;
+}
+
+.m3-chip-icon {
+  color: $accent;
+  font-size: 11px;
+}
+
+.m3-chip-text {
+  color: $foreground;
+  font-size: 10px;
+  font-weight: 500;
 }
 
 /* Weather Card */
@@ -342,83 +382,351 @@ button.power-standalone-btn:hover .power-icon,
   padding: 10px 12px;
 }
 
-.weather-main {
-  padding: 2px 4px 6px 4px;
-}
-
 .weather-hero-icon {
-  font-size: 34px;
+  font-size: 32px;
   color: $accent;
-  margin-right: 10px;
-  margin-left: 2px;
 }
 
 .weather-temp {
-  font-size: 24px;
+  font-size: 22px;
+  font-weight: 800;
+  color: $foreground;
+}
+
+.weather-desc {
+  font-size: 11px;
+  color: rgba($foreground, 0.85);
+}
+
+.weather-city-badge {
+  font-size: 10px;
+  font-weight: bold;
+  color: $accent;
+  background-color: rgba($color4, 0.2);
+  border: 1px solid rgba($accent, 0.35);
+  border-radius: 9999px;
+  padding: 1px 8px;
+}
+
+.weather-feels {
+  font-size: 10px;
+  color: rgba($foreground, 0.65);
+}
+
+/* Profile Card */
+.profile-card {
+  padding: 10px 12px;
+}
+
+.profile-avatar-frame {
+  border-radius: 9999px;
+  border: 2px solid $accent;
+}
+
+.profile-avatar-img {
+  border-radius: 9999px;
+}
+
+.profile-title {
+  font-size: 14px;
+  font-weight: 800;
+  color: $accent;
+}
+
+.profile-greeting {
+  font-size: 10.5px;
+  color: rgba($foreground, 0.85);
+}
+
+.sys-chip {
+  background-color: rgba($color8, 0.24);
+}
+
+.sys-icon {
+  font-size: 11px;
+  color: $accent;
+}
+
+.arch-icon {
+  color: #1793d1;
+}
+
+.wm-icon {
+  color: $color6;
+}
+
+.time-icon {
+  color: $accent;
+}
+
+/* Media Player Card */
+.media-card {
+  padding: 10px 12px;
+}
+
+.media-art-frame {
+  border-radius: 10px;
+  border: 1px solid rgba($accent, 0.3);
+}
+
+.media-cover-img {
+  border-radius: 10px;
+}
+
+.media-title {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: $foreground;
+}
+
+.media-artist {
+  font-size: 10px;
+  color: rgba($foreground, 0.7);
+}
+
+.media-time {
+  font-size: 9.5px;
+  color: rgba($foreground, 0.6);
+}
+
+.media-controls {
+  margin-top: 2px;
+}
+
+.media-btn {
+  border-radius: 9999px;
+  min-width: 26px;
+  min-height: 26px;
+  padding: 4px;
+  color: $foreground;
+  font-size: 12px;
+  transition: all 0.15s ease;
+}
+
+.media-btn:hover {
+  background-color: rgba($accent, 0.2);
+  color: $accent;
+}
+
+.media-btn-play {
+  background-color: $accent;
+  color: $background;
+  font-weight: bold;
+}
+
+.media-btn-play:hover {
+  background-color: lighten($accent, 15%);
+  color: $background;
+}
+
+/* Sliders and Scales (GTK 3) */
+scale {
+  min-height: 12px;
+  padding: 0;
+
+  trough {
+    min-height: 4px;
+    border-radius: 9999px;
+    background-color: rgba($color8, 0.45);
+    border: none;
+  }
+
+  highlight {
+    min-height: 4px;
+    border-radius: 9999px;
+    background-color: $accent;
+    border: none;
+  }
+
+  slider {
+    min-width: 9px;
+    min-height: 9px;
+    margin: -3px 0;
+    border-radius: 9999px;
+    background-color: $accent;
+    border: none;
+    box-shadow: none;
+  }
+
+  slider:hover {
+    background-color: lighten($accent, 15%);
+  }
+}
+
+/* Progressbars */
+progress,
+progressbar {
+  trough {
+    min-height: 5px;
+    border-radius: 9999px;
+    background-color: rgba($color8, 0.45);
+    border: none;
+  }
+
+  progress {
+    min-height: 5px;
+    border-radius: 9999px;
+    background-color: $accent;
+    border: none;
+  }
+}
+
+.cpu-bar progress {
+  background-color: $accent2;
+}
+
+.ram-bar progress {
+  background-color: $accent;
+}
+
+.disk-bar progress {
+  background-color: $color3;
+}
+
+/* Vertical Clock Card */
+.clock-vertical-card {
+  padding: 10px 8px;
+}
+
+.vertical-time-box {
+  margin-top: 4px;
+}
+
+.vert-clock-digits {
+  font-size: 26px;
   font-weight: 900;
   color: $foreground;
 }
 
-.weather-feels {
-  font-size: 11px;
+.vert-clock-dots {
+  font-size: 13px;
+  color: $accent;
+  margin: -2px 0;
+}
+
+.vertical-date-box {
+  margin-top: 6px;
+}
+
+.vert-date-day {
+  font-size: 12px;
+  font-weight: bold;
+  color: $accent;
+}
+
+.vert-date-sub {
+  font-size: 10px;
   color: rgba($foreground, 0.7);
 }
 
-.weather-city {
+/* Quick Meters Card */
+.quick-meters-card {
+  padding: 10px 12px;
+}
+
+.meters-title {
   font-size: 11px;
   font-weight: bold;
   color: $accent;
-  background-color: rgba($color4, 0.18);
-  border: 1px solid rgba($accent, 0.3);
-  border-radius: 4px;
-  padding: 2px 7px;
 }
 
-.weather-desc {
-  font-size: 12px;
-  color: rgba($foreground, 0.9);
-  font-weight: 500;
+.meter-label {
+  font-size: 10px;
+  color: rgba($foreground, 0.8);
 }
 
-.weather-details {
-  margin-top: 2px;
-}
-
-.weather-pill {
-  padding: 3px 6px;
-  border-radius: 4px;
-  background-color: rgba($color8, 0.25);
-}
-
-.pill-icon {
-  color: $accent;
-  font-size: 13px;
-}
-
-.pill-text {
-  color: $foreground;
-  font-size: 12px;
-  font-weight: 500;
-}
-
-.weather-tomorrow {
-  font-size: 12px;
-  color: $foreground;
-  padding-top: 6px;
-  border-top: 1px dashed rgba($color8, 0.35);
-}
-
-.tomorrow-label {
-  color: $mantle;
+.meter-val {
+  font-size: 10px;
   font-weight: bold;
-}
-
-.tomorrow-icon {
   color: $accent;
 }
 
-.tomorrow-val {
+/* Expanded Media Tab */
+.expanded-media-card {
+  padding: 16px 20px;
+}
+
+.expanded-art-frame {
+  border-radius: 14px;
+  border: 1px solid rgba($accent, 0.35);
+}
+
+.expanded-art-img {
+  border-radius: 14px;
+}
+
+.expanded-media-title {
+  font-size: 15px;
+  font-weight: 800;
   color: $foreground;
+}
+
+.expanded-media-artist {
+  font-size: 12px;
+  color: $accent;
+  font-weight: 600;
+}
+
+.expanded-media-album {
+  font-size: 11px;
+  color: rgba($foreground, 0.6);
+}
+
+.btn-round {
+  min-width: 32px;
+  min-height: 32px;
+  border-radius: 9999px;
+  font-size: 14px;
+  background-color: rgba($color8, 0.3);
+}
+
+.btn-round-large {
+  min-width: 42px;
+  min-height: 42px;
+  border-radius: 9999px;
+  font-size: 18px;
+}
+
+/* Expanded Performance Tab */
+.perf-card {
+  padding: 14px;
+}
+
+.perf-icon {
+  font-size: 16px;
+  color: $accent;
+}
+
+.perf-name {
+  font-size: 12px;
+  font-weight: bold;
+  color: $foreground;
+}
+
+.perf-large-stat {
+  font-size: 28px;
+  font-weight: 900;
+  color: $accent;
+}
+
+.perf-sub-stat {
+  font-size: 10.5px;
+  color: rgba($foreground, 0.7);
+}
+
+.perf-action-btn {
+  background-color: rgba($color8, 0.3);
+  border: 1px solid rgba($color8, 0.6);
+  border-radius: 9999px;
+  padding: 5px 12px;
+  color: $foreground;
+  font-size: 11px;
+  transition: all 0.15s ease;
+}
+
+.perf-action-btn:hover {
+  background-color: rgba($accent, 0.2);
+  border-color: $accent;
 }
 
 /* Calendar Card */

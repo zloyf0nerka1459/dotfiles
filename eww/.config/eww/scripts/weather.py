@@ -4,50 +4,95 @@ import json
 import time
 import os
 import sys
+from pathlib import Path
 
+CONFIG_FILE = os.path.expanduser('~/.config/eww/weather.json')
 CACHE_FILE = '/tmp/eww_weather_cache.json'
-CACHE_TTL = 900  # 15 minutes
-GEO_CACHE = '/tmp/eww_geo_cache.json'
-GEO_TTL = 86400  # 24 hours
+CACHE_TTL = 600  # 10 minutes
+
+DEFAULT_CONFIG = {
+    "city": "Новосибирск",
+    "lat": 55.0302,
+    "lon": 82.9204,
+    "timezone": "Asia/Novosibirsk",
+    "auto_geo": False
+}
+
+def load_config():
+    if os.path.exists(CONFIG_FILE):
+        try:
+            with open(CONFIG_FILE, 'r', encoding='utf-8') as f:
+                cfg = json.load(f)
+                return {**DEFAULT_CONFIG, **cfg}
+        except Exception:
+            pass
+    try:
+        os.makedirs(os.path.dirname(CONFIG_FILE), exist_ok=True)
+        with open(CONFIG_FILE, 'w', encoding='utf-8') as f:
+            json.dump(DEFAULT_CONFIG, f, indent=2, ensure_ascii=False)
+    except Exception:
+        pass
+    return DEFAULT_CONFIG
 
 def get_location():
-    if os.path.exists(GEO_CACHE):
+    cfg = load_config()
+    # If auto_geo is False, strictly bypass all network/VPN IP-based geo detection!
+    if not cfg.get("auto_geo", False):
+        return {
+            'lat': cfg.get('lat', 55.0302),
+            'lon': cfg.get('lon', 82.9204),
+            'city': cfg.get('city', 'Новосибирск'),
+            'timezone': cfg.get('timezone', 'Asia/Novosibirsk')
+        }
+
+    # Only if auto_geo is explicitly enabled:
+    geo_cache = '/tmp/eww_geo_cache.json'
+    if os.path.exists(geo_cache):
         try:
-            mtime = os.path.getmtime(GEO_CACHE)
-            if time.time() - mtime < GEO_TTL:
-                with open(GEO_CACHE, 'r', encoding='utf-8') as f:
+            if time.time() - os.path.getmtime(geo_cache) < 86400:
+                with open(geo_cache, 'r', encoding='utf-8') as f:
                     return json.load(f)
         except Exception:
             pass
 
     try:
         req = urllib.request.Request(
-            'http://ip-api.com/json/?fields=lat,lon,city,country',
+            'http://ip-api.com/json/?fields=lat,lon,city,country,timezone',
             headers={'User-Agent': 'EwwWeather/1.0'}
         )
         with urllib.request.urlopen(req, timeout=3) as resp:
             data = json.loads(resp.read().decode('utf-8'))
-            lat = data.get('lat', 55.03)
-            lon = data.get('lon', 82.92)
-            city = data.get('city', 'Новосибирск')
-            loc = {'lat': lat, 'lon': lon, 'city': city}
-            with open(GEO_CACHE, 'w', encoding='utf-8') as f:
+            loc = {
+                'lat': data.get('lat', cfg.get('lat', 55.0302)),
+                'lon': data.get('lon', cfg.get('lon', 82.9204)),
+                'city': data.get('city', cfg.get('city', 'Новосибирск')),
+                'timezone': data.get('timezone', cfg.get('timezone', 'Asia/Novosibirsk'))
+            }
+            with open(geo_cache, 'w', encoding='utf-8') as f:
                 json.dump(loc, f, ensure_ascii=False)
             return loc
     except Exception:
         pass
 
-    return {'lat': 55.03, 'lon': 82.92, 'city': 'Новосибирск'}
+    return {
+        'lat': cfg.get('lat', 55.0302),
+        'lon': cfg.get('lon', 82.9204),
+        'city': cfg.get('city', 'Новосибирск'),
+        'timezone': cfg.get('timezone', 'Asia/Novosibirsk')
+    }
 
 def get_fallback(city='Новосибирск'):
     if os.path.exists(CACHE_FILE):
         try:
             with open(CACHE_FILE, 'r', encoding='utf-8') as f:
-                return json.load(f)
+                data = json.load(f)
+                data['city'] = city
+                return data
         except Exception:
             pass
     return {
         'temp': '--°C',
+        'temp_num': 0,
         'feels_like': '--°C',
         'desc': 'Нет сети',
         'icon': '',
@@ -87,8 +132,8 @@ def decode_wmo(code, is_day):
         return ('', 'Гроза')
     return ('', 'Облачно')
 
-def fetch_weather():
-    if os.path.exists(CACHE_FILE):
+def fetch_weather(force_refresh=False):
+    if not force_refresh and os.path.exists(CACHE_FILE):
         mtime = os.path.getmtime(CACHE_FILE)
         if time.time() - mtime < CACHE_TTL:
             try:
@@ -101,8 +146,15 @@ def fetch_weather():
     lat = loc['lat']
     lon = loc['lon']
     city = loc['city']
+    tz = urllib.parse.quote(loc.get('timezone', 'Asia/Novosibirsk'))
 
-    url = f'https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current=temperature_2m,relative_humidity_2m,apparent_temperature,is_day,weather_code,wind_speed_10m&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=auto&forecast_days=2'
+    url = (
+        f'https://api.open-meteo.com/v1/forecast?'
+        f'latitude={lat}&longitude={lon}'
+        f'&current=temperature_2m,relative_humidity_2m,apparent_temperature,is_day,weather_code,wind_speed_10m'
+        f'&daily=weather_code,temperature_2m_max,temperature_2m_min'
+        f'&timezone={tz}&forecast_days=2'
+    )
     req = urllib.request.Request(url, headers={'User-Agent': 'EwwWeatherWidget/1.0'})
     try:
         with urllib.request.urlopen(req, timeout=5) as resp:
@@ -113,8 +165,10 @@ def fetch_weather():
     cur = data.get('current', {})
     daily = data.get('daily', {})
 
-    temp = round(cur.get('temperature_2m', 0))
-    feels = round(cur.get('apparent_temperature', 0))
+    raw_temp = cur.get('temperature_2m', 0)
+    raw_feels = cur.get('apparent_temperature', 0)
+    temp = round(raw_temp)
+    feels = round(raw_feels)
     hum = cur.get('relative_humidity_2m', 0)
     wind = round(cur.get('wind_speed_10m', 0))
     is_day = cur.get('is_day', 1)
@@ -135,6 +189,7 @@ def fetch_weather():
 
     result = {
         'temp': f"{temp}°C",
+        'temp_num': temp,
         'feels_like': f"{feels}°C",
         'desc': desc,
         'icon': icon,
@@ -156,5 +211,6 @@ def fetch_weather():
     return result
 
 if __name__ == '__main__':
-    data = fetch_weather()
+    force = '--force' in sys.argv or '-f' in sys.argv
+    data = fetch_weather(force_refresh=force)
     print(json.dumps(data, ensure_ascii=False))

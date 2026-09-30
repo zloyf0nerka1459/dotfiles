@@ -1935,6 +1935,8 @@ def run_user_admin_cmd(*args: str) -> tuple[bool, str]:
 class ControlCenterWindow(Gtk.Window):
     def __init__(self) -> None:
         super().__init__(title="Параметры системы")
+        self.set_wmclass("system-control-center", "System-control-center")
+        self.set_role("system-control-center")
         ensure_dirs()
         add_class(self, "control-center-window")
         self.set_default_size(1180, 780)

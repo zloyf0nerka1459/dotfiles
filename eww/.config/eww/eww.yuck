@@ -4,6 +4,7 @@
 
 ;; Variables
 (defvar show_alt_date false)
+(defvar dash_tab "dashboard")
 
 ;; Listeners
 (deflisten workspaces :initial "[]" "scripts/workspaces.sh")
@@ -15,10 +16,16 @@
 (defpoll time_alt :interval "1s" :initial "" "date '+%a, %d.%m.%Y  %H:%M'")
 (defpoll time_large :interval "1s" :initial "00:00" "date '+%H:%M'")
 (defpoll time_seconds :interval "1s" :initial ":00" "date '+:%S'")
+(defpoll time_hour :interval "1s" :initial "00" "date '+%H'")
+(defpoll time_min :interval "1s" :initial "00" "date '+%M'")
+(defpoll date_day_name :interval "10s" :initial "" "date '+%A'")
+(defpoll date_short_str :interval "10s" :initial "" "date '+%-d %B'")
 (defpoll date_full :interval "10s" :initial "" "date '+%A, %-d %B %Y'")
 (defpoll volume_data :interval "500ms" :initial '{"muted":false,"volume":50,"icon":"","text":" 50%"}' "scripts/volume.sh")
 (defpoll kbd_layout :interval "500ms" :initial "US" "scripts/keyboard.sh")
-(defpoll weather_data :interval "10m" :initial '{"temp":"--°C","feels_like":"--°C","desc":"Загрузка...","icon":"","humidity":"--%","wind":"-- км/ч","city":"Новосибирск","today_range":"--","tomorrow_temp":"--°C","tomorrow_icon":"","tomorrow_desc":"--"}' "scripts/weather.sh")
+(defpoll weather_data :interval "10m" :initial '{"temp":"--°C","feels_like":"--°C","desc":"Загрузка...","icon":"","humidity":"--%","wind":"-- км/ч","city":"Новосибирск","today_range":"--","tomorrow_temp":"--°C","tomorrow_icon":"","tomorrow_desc":"--"}' "scripts/weather.py")
+(defpoll profile_data :interval "30s" :initial '{"user":"fonera","title":"Привет, fonera!","greeting":"Отличный день!","avatar_path":"","uptime":"онлайн","os":"Arch Linux","wm":"i3wm"}' "scripts/profile.py")
+(defpoll media_data :interval "1s" :initial '{"status":"Stopped","status_icon":"","is_playing":false,"title":"Нет трека","artist":"Воспроизведение остановлено","album":"","cover_art":"","position":0,"position_str":"00:00","length":0,"length_str":"00:00","progress":0}' "scripts/media.py")
 (defpoll net_data :interval "2s" :initial '{"status":"connected","type":"ethernet","icon":"󰈀","text":"LAN","tooltip":"Сеть...","ip":"","gateway":"","ethernet":{"available":true,"device":"enp4s0","name":"Ethernet","state":"connected","connected":true,"ip":""},"wifi":{"has_hw":false,"enabled":false,"connected":false,"device":"","ssid":"","signal":0,"icon":"󰤮","ip":""},"wifi_list":[]}' "scripts/network.sh")
 (defpoll wifi_list :interval "5s" :initial "[]" "scripts/network-wifi-list.sh")
 
@@ -46,10 +53,10 @@
   :wm-ignore false
   (bar_bottom_layout))
 
-;; Dashboard Popup (Clock, Weather, Calendar)
+;; Dashboard Popup (Clock, Weather, Profile, Media, Calendar)
 (defwindow dashboard
   :monitor 0
-  :geometry (geometry :x "0%" :y "28px" :width "380px" :anchor "top center")
+  :geometry (geometry :x "0%" :y "28px" :width "740px" :anchor "top center")
   :stacking "fg"
   :windowtype "dialog"
   :wm-ignore true
@@ -196,50 +203,185 @@
 ;; POPUP WIDGETS
 ;; --------------------------------------------
 
-;; Dashboard Popup (Clock, Real Weather, Working Calendar)
+;; Dashboard Popup (Material Design 3 Bento Layout with Tabs)
 (defwidget dashboard_layout []
   (box :orientation "v" :class "popup-box dashboard-box" :space-evenly false :spacing 10
-    ;; Header: Clock & Date
-    (box :class "card time-card" :orientation "v" :space-evenly false :spacing 2
-      (box :class "clock-box" :orientation "h" :space-evenly false :halign "center"
-        (label :class "clock-large" :text time_large)
-        (label :class "clock-seconds" :text time_seconds))
-      (label :class "clock-date" :text date_full))
+    ;; Top Navigation Header (Tabs)
+    (box :class "dash-nav" :orientation "h" :space-evenly false :spacing 8 :halign "center"
+      (button :class {dash_tab == "dashboard" ? "dash-tab-btn active" : "dash-tab-btn"}
+              :onclick "eww update dash_tab=dashboard"
+        (box :orientation "h" :space-evenly false :spacing 6
+          (label :class "dash-tab-icon" :text "󰕮")
+          (label :class "dash-tab-label" :text "Панель")))
+      (button :class {dash_tab == "media" ? "dash-tab-btn active" : "dash-tab-btn"}
+              :onclick "eww update dash_tab=media"
+        (box :orientation "h" :space-evenly false :spacing 6
+          (label :class "dash-tab-icon" :text "󰎈")
+          (label :class "dash-tab-label" :text "Медиа")))
+      (button :class {dash_tab == "performance" ? "dash-tab-btn active" : "dash-tab-btn"}
+              :onclick "eww update dash_tab=performance"
+        (box :orientation "h" :space-evenly false :spacing 6
+          (label :class "dash-tab-icon" :text "󰓅")
+          (label :class "dash-tab-label" :text "Система"))))
 
-    ;; Real Weather Card
-    (box :class "card weather-card" :orientation "v" :space-evenly false :spacing 8
-      ;; Main row: Balanced two-column layout
-      (box :class "weather-main" :orientation "h" :space-evenly false
-        ;; Left column: Icon + Temp & Feels like
-        (box :class "weather-main-left" :orientation "h" :space-evenly false :spacing 12 :halign "start"
-          (label :class "weather-hero-icon" :text {weather_data.icon} :valign "center")
-          (box :orientation "v" :space-evenly false :spacing 1 :valign "center"
-            (label :class "weather-temp" :halign "start" :text {weather_data.temp})
-            (label :class "weather-feels" :halign "start" :text "Ощущается ${weather_data.feels_like}")))
-        ;; Right column: City badge + Condition description
-        (box :class "weather-main-right" :hexpand true :orientation "v" :space-evenly false :spacing 4 :halign "end" :valign "center"
-          (label :class "weather-city" :halign "end" :text {weather_data.city})
-          (label :class "weather-desc" :halign "end" :text {weather_data.desc})))
-      ;; Details row: Humidity, Wind, Daily Range
-      (box :class "weather-details" :orientation "h" :space-evenly true
-        (box :space-evenly false :spacing 5 :halign "center" :class "weather-pill"
-          (label :class "pill-icon" :text "")
-          (label :class "pill-text" :text {weather_data.humidity}))
-        (box :space-evenly false :spacing 5 :halign "center" :class "weather-pill"
-          (label :class "pill-icon" :text "")
-          (label :class "pill-text" :text {weather_data.wind}))
-        (box :space-evenly false :spacing 5 :halign "center" :class "weather-pill"
-          (label :class "pill-icon" :text "")
-          (label :class "pill-text" :text {weather_data.today_range})))
-      ;; Tomorrow Forecast row
-      (box :class "weather-tomorrow" :orientation "h" :space-evenly false :spacing 6 :halign "center"
-        (label :class "tomorrow-label" :text "Завтра:")
-        (label :class "tomorrow-icon" :text {weather_data.tomorrow_icon})
-        (label :class "tomorrow-val" :text "${weather_data.tomorrow_temp}, ${weather_data.tomorrow_desc}")))
+    (stack :selected {dash_tab == "dashboard" ? 0 : (dash_tab == "media" ? 1 : 2)} :transition "crossfade"
+      ;; TAB 1: Bento Dashboard (Default & Primary View)
+      (box :orientation "v" :space-evenly false :spacing 10 :class "dash-view-box"
+      ;; Top Row (Weather, Profile, Media)
+      (box :orientation "h" :space-evenly false :spacing 10
+        ;; 1. Weather Card
+        (box :class "card weather-card m3-card" :orientation "v" :space-evenly false :spacing 6 :width 228
+          (box :orientation "h" :space-evenly false :spacing 8
+            (label :class "weather-hero-icon" :text {weather_data.icon})
+            (box :orientation "v" :space-evenly false :spacing 1 :valign "center"
+              (label :class "weather-temp" :halign "start" :text {weather_data.temp})
+              (label :class "weather-desc" :halign "start" :text {weather_data.desc})))
+          (box :orientation "h" :space-evenly false :spacing 6
+            (label :class "weather-city-badge" :text {weather_data.city})
+            (label :class "weather-feels" :valign "center" :text "Ощущ. ${weather_data.feels_like}"))
+          (box :class "weather-details-row" :orientation "h" :space-evenly true :spacing 3
+            (box :class "m3-chip" :space-evenly false :spacing 3 :halign "center"
+              (label :class "m3-chip-icon" :text "")
+              (label :class "m3-chip-text" :text {weather_data.humidity}))
+            (box :class "m3-chip" :space-evenly false :spacing 3 :halign "center"
+              (label :class "m3-chip-icon" :text "")
+              (label :class "m3-chip-text" :text {weather_data.wind}))
+            (box :class "m3-chip" :space-evenly false :spacing 3 :halign "center"
+              (label :class "m3-chip-icon" :text "")
+              (label :class "m3-chip-text" :text {weather_data.today_range}))))
 
-    ;; Small Working Calendar Card
-    (box :class "card cal-card" :orientation "v" :space-evenly false
-      (calendar :class "cal"))))
+        ;; 2. Profile & Greeting Card
+        (box :class "card profile-card m3-card" :orientation "v" :space-evenly false :spacing 8 :width 245
+          (box :orientation "h" :space-evenly false :spacing 10
+            (box :class "profile-avatar-frame" :valign "center"
+              (image :path {profile_data.avatar_path != "" ? profile_data.avatar_path : "/home/fonera/.config/eww/assets/default_cover.png"}
+                     :image-width 52 :image-height 52 :class "profile-avatar-img"))
+            (box :orientation "v" :space-evenly false :spacing 3 :valign "center" :hexpand true
+              (label :class "profile-title" :halign "start" :text {profile_data.title})
+              (label :class "profile-greeting" :halign "start" :wrap true :text {profile_data.greeting})))
+          (box :class "profile-badges" :orientation "h" :space-evenly false :spacing 5
+            (box :class "m3-chip sys-chip" :space-evenly false :spacing 3
+              (label :class "sys-icon arch-icon" :text "󰣇")
+              (label :class "m3-chip-text" :text "Arch"))
+            (box :class "m3-chip sys-chip" :space-evenly false :spacing 3
+              (label :class "sys-icon wm-icon" :text "")
+              (label :class "m3-chip-text" :text "i3wm"))
+            (box :class "m3-chip sys-chip" :space-evenly false :spacing 3 :hexpand true
+              (label :class "sys-icon time-icon" :text "")
+              (label :class "m3-chip-text" :text {profile_data.uptime}))))
+
+        ;; 3. Media Player Card
+        (box :class "card media-card m3-card" :orientation "v" :space-evenly false :spacing 6 :width 228
+          (box :orientation "h" :space-evenly false :spacing 8
+            (box :class "media-art-frame" :valign "center"
+              (image :path {media_data.cover_art != "" ? media_data.cover_art : "/home/fonera/.config/eww/assets/default_cover.png"}
+                     :image-width 46 :image-height 46 :class "media-cover-img"))
+            (box :orientation "v" :space-evenly false :spacing 2 :valign "center" :hexpand true
+              (label :class "media-title" :halign "start" :limit-width 20 :text {media_data.title})
+              (label :class "media-artist" :halign "start" :limit-width 20 :text {media_data.artist})))
+          (box :orientation "v" :space-evenly false :spacing 2 :class "media-progress-box"
+            (scale :class "media-slider"
+                   :min 0
+                   :max 100
+                   :value {media_data.progress}
+                   :onchange "scripts/media.py --seek-pct {}")
+            (box :orientation "h" :space-evenly false
+              (label :class "media-time" :halign "start" :text {media_data.position_str})
+              (label :class "media-time" :hexpand true :halign "end" :text {media_data.length_str})))
+          (box :class "media-controls" :orientation "h" :space-evenly true :spacing 6
+            (button :class "media-btn" :onclick "scripts/media.py --prev" :tooltip "Предыдущий" "󰒮")
+            (button :class "media-btn media-btn-play" :onclick "scripts/media.py --toggle" :tooltip "Воспроизведение" {media_data.status_icon})
+            (button :class "media-btn" :onclick "scripts/media.py --next" :tooltip "Следующий" "󰒭"))))
+
+      ;; Bottom Row (Clock, Calendar, Quick Meters)
+      (box :orientation "h" :space-evenly false :spacing 10
+        ;; 1. Vertical Clock & Date Card
+        (box :class "card clock-vertical-card m3-card" :orientation "v" :space-evenly false :spacing 6 :width 125 :halign "center"
+          (box :orientation "v" :space-evenly false :spacing 0 :halign "center" :valign "center" :class "vertical-time-box"
+            (label :class "vert-clock-digits" :text time_hour)
+            (label :class "vert-clock-dots" :text "••")
+            (label :class "vert-clock-digits" :text time_min))
+          (box :orientation "v" :space-evenly false :spacing 1 :halign "center" :class "vertical-date-box"
+            (label :class "vert-date-day" :text date_day_name)
+            (label :class "vert-date-sub" :text date_short_str)))
+
+        ;; 2. Calendar Card
+        (box :class "card cal-card m3-card" :orientation "v" :space-evenly false :hexpand true
+          (calendar :class "cal"))
+
+        ;; 3. Quick Control Sliders / Meters Card
+        (box :class "card quick-meters-card m3-card" :orientation "v" :space-evenly false :spacing 8 :width 215
+          (label :class "meters-title" :text "Управление" :halign "start")
+          ;; Volume slider
+          (box :orientation "v" :space-evenly false :spacing 2
+            (box :orientation "h" :space-evenly false
+              (label :class "meter-label" :text "Громкость" :halign "start")
+              (label :class "meter-val" :hexpand true :halign "end" :text "${volume_data.volume}%"))
+            (scale :class "meter-slider vol-slider"
+                   :min 0 :max 100 :value {volume_data.volume}
+                   :onchange "amixer -D pulse set Master {}%"))
+          ;; CPU bar
+          (box :orientation "v" :space-evenly false :spacing 2
+            (box :orientation "h" :space-evenly false
+              (label :class "meter-label" :text "CPU" :halign "start")
+              (label :class "meter-val" :hexpand true :halign "end" :text "${round(EWW_CPU.avg, 0)}%"))
+            (progress :class "meter-bar cpu-bar" :value {round(EWW_CPU.avg, 0)}))
+          ;; RAM bar
+          (box :orientation "v" :space-evenly false :spacing 2
+            (box :orientation "h" :space-evenly false
+              (label :class "meter-label" :text "RAM" :halign "start")
+              (label :class "meter-val" :hexpand true :halign "end" :text "${round(EWW_RAM.used_mem_perc, 0)}%"))
+            (progress :class "meter-bar ram-bar" :value {round(EWW_RAM.used_mem_perc, 0)})))))
+
+      ;; TAB 2: Expanded Media View
+      (box :orientation "v" :space-evenly false :spacing 12 :class "dash-view-box"
+      (box :class "card expanded-media-card m3-card" :orientation "h" :space-evenly false :spacing 20
+        (box :class "expanded-art-frame" :valign "center" :halign "center"
+          (image :path {media_data.cover_art != "" ? media_data.cover_art : "/home/fonera/.config/eww/assets/default_cover.png"}
+                 :image-width 140 :image-height 140 :class "expanded-art-img"))
+        (box :orientation "v" :space-evenly false :spacing 10 :hexpand true :valign "center"
+          (box :orientation "v" :space-evenly false :spacing 3
+            (label :class "expanded-media-title" :halign "start" :wrap true :text {media_data.full_title})
+            (label :class "expanded-media-artist" :halign "start" :text {media_data.artist})
+            (label :class "expanded-media-album" :halign "start" :visible {media_data.album != ""} :text {media_data.album}))
+          (box :orientation "v" :space-evenly false :spacing 4
+            (scale :class "media-slider big-slider"
+                   :min 0 :max 100 :value {media_data.progress}
+                   :onchange "scripts/media.py --seek-pct {}")
+            (box :orientation "h" :space-evenly false
+              (label :class "media-time" :halign "start" :text {media_data.position_str})
+              (label :class "media-time" :hexpand true :halign "end" :text {media_data.length_str})))
+          (box :orientation "h" :space-evenly false :spacing 14 :halign "start"
+            (button :class "media-btn btn-round" :onclick "scripts/media.py --rewind 10" :tooltip "-10 сек" "󰕌")
+            (button :class "media-btn btn-round" :onclick "scripts/media.py --prev" :tooltip "Предыдущий" "󰒮")
+            (button :class "media-btn media-btn-play btn-round-large" :onclick "scripts/media.py --toggle" :tooltip "Воспроизведение" {media_data.status_icon})
+            (button :class "media-btn btn-round" :onclick "scripts/media.py --next" :tooltip "Следующий" "󰒭")
+            (button :class "media-btn btn-round" :onclick "scripts/media.py --forward 10" :tooltip "+10 сек" "󰕎")))))
+
+      ;; TAB 3: Expanded Performance View
+      (box :orientation "v" :space-evenly false :spacing 12 :class "dash-view-box"
+      (box :orientation "h" :space-evenly true :spacing 12
+        (box :class "card perf-card m3-card" :orientation "v" :space-evenly false :spacing 8
+          (box :orientation "h" :space-evenly false :spacing 8
+            (label :class "perf-icon" :text "")
+            (label :class "perf-name" :text "Процессор"))
+          (label :class "perf-large-stat" :text "${round(EWW_CPU.avg, 0)}%")
+          (progress :class "meter-bar cpu-bar" :value {round(EWW_CPU.avg, 0)})
+          (button :class "perf-action-btn" :onclick "~/.config/eww/scripts/btop.sh" "Запустить btop"))
+        (box :class "card perf-card m3-card" :orientation "v" :space-evenly false :spacing 8
+          (box :orientation "h" :space-evenly false :spacing 8
+            (label :class "perf-icon" :text "")
+            (label :class "perf-name" :text "ОЗУ"))
+          (label :class "perf-large-stat" :text "${round(EWW_RAM.used_mem_perc, 0)}%")
+          (progress :class "meter-bar ram-bar" :value {round(EWW_RAM.used_mem_perc, 0)})
+          (label :class "perf-sub-stat" :text "${round(EWW_RAM.used_mem / 1024 / 1024 / 1024, 1)} ГБ / ${round(EWW_RAM.total_mem / 1024 / 1024 / 1024, 1)} ГБ"))
+        (box :class "card perf-card m3-card" :orientation "v" :space-evenly false :spacing 8
+          (box :orientation "h" :space-evenly false :spacing 8
+            (label :class "perf-icon" :text "󰋊")
+            (label :class "perf-name" :text "Диск (/)"))
+          (label :class "perf-large-stat" :text "${round(EWW_DISK['/'].used_perc, 0)}%")
+          (progress :class "meter-bar disk-bar" :value {round(EWW_DISK['/'].used_perc, 0)})
+          (label :class "perf-sub-stat" :text "${round(EWW_DISK['/'].free / 1024 / 1024 / 1024, 1)} ГБ свободно")))))))
 
 ;; Power Menu Popup
 (defwidget powermenu_layout []
