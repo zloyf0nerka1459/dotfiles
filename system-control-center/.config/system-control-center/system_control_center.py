@@ -16,6 +16,7 @@ import re
 import shlex
 import shutil
 import subprocess
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -4593,6 +4594,10 @@ def main() -> None:
     load_css()
     win = ControlCenterWindow()
     win.show_all()
+    if len(sys.argv) > 1:
+        target = sys.argv[1].lstrip("-")
+        if target in win.sidebar_rows:
+            win.select_page(target)
     Gtk.main()
 
 

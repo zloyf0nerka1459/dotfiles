@@ -382,8 +382,17 @@ button.power-standalone-btn:hover .power-icon,
   padding: 10px 12px;
 }
 
+.weather-icon-box {
+  min-width: 52px;
+  min-height: 52px;
+  background-color: rgba($accent, 0.12);
+  border: 1px solid rgba($accent, 0.25);
+  border-radius: 14px;
+  padding: 6px;
+}
+
 .weather-hero-icon {
-  font-size: 32px;
+  font-size: 30px;
   color: $accent;
 }
 
@@ -416,6 +425,19 @@ button.power-standalone-btn:hover .power-icon,
 /* Profile Card */
 .profile-card {
   padding: 10px 12px;
+}
+
+.profile-avatar-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  border-radius: 9999px;
+  transition: all 0.15s ease;
+
+  &:hover {
+    box-shadow: 0 0 10px rgba($accent, 0.45);
+  }
 }
 
 .profile-avatar-frame {
@@ -670,6 +692,122 @@ progressbar {
 .expanded-media-album {
   font-size: 11px;
   color: rgba($foreground, 0.6);
+}
+
+.media-status-pill {
+  font-size: 10px;
+  font-weight: bold;
+  border-radius: 9999px;
+  padding: 2px 8px;
+
+  &.playing {
+    background-color: rgba($color2, 0.2);
+    color: $color2;
+    border: 1px solid rgba($color2, 0.4);
+  }
+
+  &.paused {
+    background-color: rgba($color8, 0.25);
+    color: rgba($foreground, 0.7);
+    border: 1px solid rgba($color8, 0.4);
+  }
+}
+
+.media-album-chip {
+  font-size: 10px;
+  color: rgba($foreground, 0.65);
+  background-color: rgba($color8, 0.18);
+  border-radius: 9999px;
+  padding: 2px 8px;
+}
+
+.media-ctrl-row {
+  margin-top: 6px;
+}
+
+.btn-circle {
+  min-width: 36px;
+  min-height: 36px;
+  border-radius: 9999px;
+  background-color: rgba($color8, 0.3);
+  color: $foreground;
+  padding: 0;
+  margin: 0;
+  border: 1px solid rgba($color8, 0.5);
+  transition: all 0.15s ease;
+
+  label {
+    font-size: 15px;
+    padding: 0;
+    margin: 0;
+  }
+
+  &:hover {
+    background-color: rgba($accent, 0.25);
+    border-color: $accent;
+    color: $accent;
+  }
+}
+
+.media-btn-play {
+  min-width: 50px;
+  min-height: 50px;
+  border-radius: 9999px;
+  background-color: $accent;
+  color: $background;
+  padding: 0;
+  margin: 0;
+  border: none;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+  transition: all 0.15s ease;
+
+  label {
+    font-size: 20px;
+    font-weight: bold;
+    padding: 0;
+    margin: 0;
+  }
+
+  &:hover {
+    background-color: lighten($accent, 8%);
+  }
+}
+
+.media-preset-btn {
+  background-color: rgba($color8, 0.25);
+  border: 1px solid rgba($color8, 0.5);
+  border-radius: 9999px;
+  padding: 4px 8px;
+  color: $foreground;
+  font-size: 10px;
+  font-weight: 500;
+  transition: all 0.15s ease;
+
+  &:hover {
+    background-color: rgba($accent, 0.2);
+    border-color: $accent;
+    color: $accent;
+  }
+}
+
+.media-detail-item {
+  padding: 2px 0;
+  border-bottom: 1px solid rgba($color8, 0.15);
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.detail-title {
+  font-size: 11px;
+  color: rgba($foreground, 0.65);
+}
+
+.detail-val {
+  font-size: 11px;
+  font-weight: 600;
+  color: $foreground;
 }
 
 .btn-round {

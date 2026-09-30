@@ -227,161 +227,276 @@
     (stack :selected {dash_tab == "dashboard" ? 0 : (dash_tab == "media" ? 1 : 2)} :transition "crossfade"
       ;; TAB 1: Bento Dashboard (Default & Primary View)
       (box :orientation "v" :space-evenly false :spacing 10 :class "dash-view-box"
-      ;; Top Row (Weather, Profile, Media)
-      (box :orientation "h" :space-evenly false :spacing 10
-        ;; 1. Weather Card
-        (box :class "card weather-card m3-card" :orientation "v" :space-evenly false :spacing 6 :width 228
-          (box :orientation "h" :space-evenly false :spacing 8
-            (label :class "weather-hero-icon" :text {weather_data.icon})
-            (box :orientation "v" :space-evenly false :spacing 1 :valign "center"
-              (label :class "weather-temp" :halign "start" :text {weather_data.temp})
-              (label :class "weather-desc" :halign "start" :text {weather_data.desc})))
-          (box :orientation "h" :space-evenly false :spacing 6
-            (label :class "weather-city-badge" :text {weather_data.city})
-            (label :class "weather-feels" :valign "center" :text "Ощущ. ${weather_data.feels_like}"))
-          (box :class "weather-details-row" :orientation "h" :space-evenly true :spacing 3
-            (box :class "m3-chip" :space-evenly false :spacing 3 :halign "center"
-              (label :class "m3-chip-icon" :text "")
-              (label :class "m3-chip-text" :text {weather_data.humidity}))
-            (box :class "m3-chip" :space-evenly false :spacing 3 :halign "center"
-              (label :class "m3-chip-icon" :text "")
-              (label :class "m3-chip-text" :text {weather_data.wind}))
-            (box :class "m3-chip" :space-evenly false :spacing 3 :halign "center"
-              (label :class "m3-chip-icon" :text "")
-              (label :class "m3-chip-text" :text {weather_data.today_range}))))
+        ;; Top Row (Weather & Profile)
+        (box :orientation "h" :space-evenly false :spacing 10
+          ;; 1. Weather Card (Cleanly spaced icon & text shifted right)
+          (box :class "card weather-card m3-card" :orientation "v" :space-evenly false :spacing 8 :width 355
+            (box :orientation "h" :space-evenly false :spacing 14
+              ;; Hero Icon with breathing room
+              (box :class "weather-icon-box" :valign "center" :halign "center"
+                (label :class "weather-hero-icon" :text {weather_data.icon}))
+              ;; Details column (temperature & description cleanly to the right)
+              (box :orientation "v" :space-evenly false :spacing 2 :valign "center" :hexpand true
+                (box :orientation "h" :space-evenly false :spacing 8
+                  (label :class "weather-temp" :halign "start" :text {weather_data.temp})
+                  (label :class "weather-city-badge" :valign "center" :text {weather_data.city}))
+                (box :orientation "h" :space-evenly false :spacing 8
+                  (label :class "weather-desc" :halign "start" :text {weather_data.desc})
+                  (label :class "weather-feels" :valign "center" :text "Ощущ. ${weather_data.feels_like}"))))
+            ;; 4 Weather Pills Row
+            (box :class "weather-details-row" :orientation "h" :space-evenly true :spacing 4
+              (box :class "m3-chip" :space-evenly false :spacing 3 :halign "center"
+                (label :class "m3-chip-icon" :text "")
+                (label :class "m3-chip-text" :text {weather_data.humidity}))
+              (box :class "m3-chip" :space-evenly false :spacing 3 :halign "center"
+                (label :class "m3-chip-icon" :text "")
+                (label :class "m3-chip-text" :text {weather_data.wind}))
+              (box :class "m3-chip" :space-evenly false :spacing 3 :halign "center"
+                (label :class "m3-chip-icon" :text "")
+                (label :class "m3-chip-text" :text {weather_data.today_range}))
+              (box :class "m3-chip" :space-evenly false :spacing 3 :halign "center" :tooltip "Завтра: ${weather_data.tomorrow_temp}, ${weather_data.tomorrow_desc}"
+                (label :class "m3-chip-icon" :text {weather_data.tomorrow_icon})
+                (label :class "m3-chip-text" :text {weather_data.tomorrow_temp}))))
 
-        ;; 2. Profile & Greeting Card
-        (box :class "card profile-card m3-card" :orientation "v" :space-evenly false :spacing 8 :width 245
-          (box :orientation "h" :space-evenly false :spacing 10
-            (box :class "profile-avatar-frame" :valign "center"
-              (image :path {profile_data.avatar_path != "" ? profile_data.avatar_path : "/home/fonera/.config/eww/assets/default_cover.png"}
-                     :image-width 52 :image-height 52 :class "profile-avatar-img"))
-            (box :orientation "v" :space-evenly false :spacing 3 :valign "center" :hexpand true
-              (label :class "profile-title" :halign "start" :text {profile_data.title})
-              (label :class "profile-greeting" :halign "start" :wrap true :text {profile_data.greeting})))
-          (box :class "profile-badges" :orientation "h" :space-evenly false :spacing 5
-            (box :class "m3-chip sys-chip" :space-evenly false :spacing 3
-              (label :class "sys-icon arch-icon" :text "󰣇")
-              (label :class "m3-chip-text" :text "Arch"))
-            (box :class "m3-chip sys-chip" :space-evenly false :spacing 3
-              (label :class "sys-icon wm-icon" :text "")
-              (label :class "m3-chip-text" :text "i3wm"))
-            (box :class "m3-chip sys-chip" :space-evenly false :spacing 3 :hexpand true
-              (label :class "sys-icon time-icon" :text "")
-              (label :class "m3-chip-text" :text {profile_data.uptime}))))
+          ;; 2. Profile & Greeting Card (Clean, non-duplicate motto, compact start-aligned chips)
+          (box :class "card profile-card m3-card" :orientation "v" :space-evenly false :spacing 8 :width 355
+            (box :orientation "h" :space-evenly false :spacing 12
+              (button :class "profile-avatar-btn" :onclick "~/.config/system-control-center/launch.sh profile & eww close dashboard" :tooltip "Настройки профиля и выбор аватарки"
+                (box :class "profile-avatar-frame" :valign "center"
+                  (image :path {profile_data.avatar_path != "" ? profile_data.avatar_path : "/home/fonera/.config/eww/assets/default_cover.png"}
+                         :image-width 56 :image-height 56 :class "profile-avatar-img")))
+              (box :orientation "v" :space-evenly false :spacing 3 :valign "center" :hexpand true
+                (label :class "profile-title" :halign "start" :text {profile_data.title})
+                (label :class "profile-greeting" :halign "start" :wrap true :text {profile_data.greeting})))
+            (box :class "profile-badges" :orientation "h" :space-evenly false :spacing 6 :halign "start"
+              (box :class "m3-chip sys-chip" :space-evenly false :spacing 4 :halign "start"
+                (label :class "sys-icon arch-icon" :text "󰣇")
+                (label :class "m3-chip-text" :text "Arch"))
+              (box :class "m3-chip sys-chip" :space-evenly false :spacing 4 :halign "start"
+                (label :class "sys-icon wm-icon" :text "")
+                (label :class "m3-chip-text" :text "i3wm"))
+              (box :class "m3-chip sys-chip" :space-evenly false :spacing 4 :halign "start"
+                (label :class "sys-icon time-icon" :text "")
+                (label :class "m3-chip-text" :text {profile_data.uptime}))
+              (box :class "m3-chip sys-chip" :space-evenly false :spacing 4 :halign "start"
+                (label :class "sys-icon host-icon" :text "󰌢")
+                (label :class "m3-chip-text" :text {profile_data.kernel})))))
 
-        ;; 3. Media Player Card
-        (box :class "card media-card m3-card" :orientation "v" :space-evenly false :spacing 6 :width 228
-          (box :orientation "h" :space-evenly false :spacing 8
-            (box :class "media-art-frame" :valign "center"
-              (image :path {media_data.cover_art != "" ? media_data.cover_art : "/home/fonera/.config/eww/assets/default_cover.png"}
-                     :image-width 46 :image-height 46 :class "media-cover-img"))
-            (box :orientation "v" :space-evenly false :spacing 2 :valign "center" :hexpand true
-              (label :class "media-title" :halign "start" :limit-width 20 :text {media_data.title})
-              (label :class "media-artist" :halign "start" :limit-width 20 :text {media_data.artist})))
-          (box :orientation "v" :space-evenly false :spacing 2 :class "media-progress-box"
-            (scale :class "media-slider"
-                   :min 0
-                   :max 100
-                   :value {media_data.progress}
-                   :onchange "scripts/media.py --seek-pct {}")
-            (box :orientation "h" :space-evenly false
-              (label :class "media-time" :halign "start" :text {media_data.position_str})
-              (label :class "media-time" :hexpand true :halign "end" :text {media_data.length_str})))
-          (box :class "media-controls" :orientation "h" :space-evenly true :spacing 6
-            (button :class "media-btn" :onclick "scripts/media.py --prev" :tooltip "Предыдущий" "󰒮")
-            (button :class "media-btn media-btn-play" :onclick "scripts/media.py --toggle" :tooltip "Воспроизведение" {media_data.status_icon})
-            (button :class "media-btn" :onclick "scripts/media.py --next" :tooltip "Следующий" "󰒭"))))
+        ;; Bottom Row (Clock, Calendar, Quick Controls)
+        (box :orientation "h" :space-evenly false :spacing 10
+          ;; 1. Vertical Clock & Date Card
+          (box :class "card clock-vertical-card m3-card" :orientation "v" :space-evenly false :spacing 6 :width 125 :halign "center"
+            (box :orientation "v" :space-evenly false :spacing 0 :halign "center" :valign "center" :class "vertical-time-box"
+              (label :class "vert-clock-digits" :text time_hour)
+              (label :class "vert-clock-dots" :text "••")
+              (label :class "vert-clock-digits" :text time_min))
+            (box :orientation "v" :space-evenly false :spacing 1 :halign "center" :class "vertical-date-box"
+              (label :class "vert-date-day" :text date_day_name)
+              (label :class "vert-date-sub" :text date_short_str)))
 
-      ;; Bottom Row (Clock, Calendar, Quick Meters)
-      (box :orientation "h" :space-evenly false :spacing 10
-        ;; 1. Vertical Clock & Date Card
-        (box :class "card clock-vertical-card m3-card" :orientation "v" :space-evenly false :spacing 6 :width 125 :halign "center"
-          (box :orientation "v" :space-evenly false :spacing 0 :halign "center" :valign "center" :class "vertical-time-box"
-            (label :class "vert-clock-digits" :text time_hour)
-            (label :class "vert-clock-dots" :text "••")
-            (label :class "vert-clock-digits" :text time_min))
-          (box :orientation "v" :space-evenly false :spacing 1 :halign "center" :class "vertical-date-box"
-            (label :class "vert-date-day" :text date_day_name)
-            (label :class "vert-date-sub" :text date_short_str)))
+          ;; 2. Calendar Card
+          (box :class "card cal-card m3-card" :orientation "v" :space-evenly false :hexpand true
+            (calendar :class "cal"))
 
-        ;; 2. Calendar Card
-        (box :class "card cal-card m3-card" :orientation "v" :space-evenly false :hexpand true
-          (calendar :class "cal"))
+          ;; 3. Quick Control Sliders / Meters Card
+          (box :class "card quick-meters-card m3-card" :orientation "v" :space-evenly false :spacing 8 :width 220
+            (label :class "meters-title" :text "Управление" :halign "start")
+            ;; Volume slider
+            (box :orientation "v" :space-evenly false :spacing 2
+              (box :orientation "h" :space-evenly false
+                (label :class "meter-label" :text "Громкость" :halign "start")
+                (label :class "meter-val" :hexpand true :halign "end" :text "${volume_data.volume}%"))
+              (scale :class "meter-slider vol-slider"
+                     :min 0 :max 100 :value {volume_data.volume}
+                     :onchange "amixer -D pulse set Master {}%"))
+            ;; CPU bar
+            (box :orientation "v" :space-evenly false :spacing 2
+              (box :orientation "h" :space-evenly false
+                (label :class "meter-label" :text "CPU" :halign "start")
+                (label :class "meter-val" :hexpand true :halign "end" :text "${round(EWW_CPU.avg, 0)}%"))
+              (progress :class "meter-bar cpu-bar" :value {round(EWW_CPU.avg, 0)}))
+            ;; RAM bar
+            (box :orientation "v" :space-evenly false :spacing 2
+              (box :orientation "h" :space-evenly false
+                (label :class "meter-label" :text "RAM" :halign "start")
+                (label :class "meter-val" :hexpand true :halign "end" :text "${round(EWW_RAM.used_mem_perc, 0)}%"))
+              (progress :class "meter-bar ram-bar" :value {round(EWW_RAM.used_mem_perc, 0)})))))
 
-        ;; 3. Quick Control Sliders / Meters Card
-        (box :class "card quick-meters-card m3-card" :orientation "v" :space-evenly false :spacing 8 :width 215
-          (label :class "meters-title" :text "Управление" :halign "start")
-          ;; Volume slider
-          (box :orientation "v" :space-evenly false :spacing 2
-            (box :orientation "h" :space-evenly false
-              (label :class "meter-label" :text "Громкость" :halign "start")
-              (label :class "meter-val" :hexpand true :halign "end" :text "${volume_data.volume}%"))
-            (scale :class "meter-slider vol-slider"
-                   :min 0 :max 100 :value {volume_data.volume}
-                   :onchange "amixer -D pulse set Master {}%"))
-          ;; CPU bar
-          (box :orientation "v" :space-evenly false :spacing 2
-            (box :orientation "h" :space-evenly false
-              (label :class "meter-label" :text "CPU" :halign "start")
-              (label :class "meter-val" :hexpand true :halign "end" :text "${round(EWW_CPU.avg, 0)}%"))
-            (progress :class "meter-bar cpu-bar" :value {round(EWW_CPU.avg, 0)}))
-          ;; RAM bar
-          (box :orientation "v" :space-evenly false :spacing 2
-            (box :orientation "h" :space-evenly false
-              (label :class "meter-label" :text "RAM" :halign "start")
-              (label :class "meter-val" :hexpand true :halign "end" :text "${round(EWW_RAM.used_mem_perc, 0)}%"))
-            (progress :class "meter-bar ram-bar" :value {round(EWW_RAM.used_mem_perc, 0)})))))
+      ;; TAB 2: Dedicated Media Suite
+      (box :orientation "v" :space-evenly false :spacing 10 :class "dash-view-box"
+        ;; Row 1: Main Media Studio Card
+        (box :class "card expanded-media-card m3-card" :orientation "h" :space-evenly false :spacing 20
+          ;; Album Art Frame
+          (box :class "expanded-art-frame" :valign "center" :halign "center"
+            (image :path {media_data.cover_art != "" ? media_data.cover_art : "/home/fonera/.config/eww/assets/default_cover.png"}
+                   :image-width 136 :image-height 136 :class "expanded-art-img"))
+          ;; Track Info & Controls
+          (box :orientation "v" :space-evenly false :spacing 8 :hexpand true :valign "center"
+            (box :orientation "v" :space-evenly false :spacing 2
+              (box :orientation "h" :space-evenly false :spacing 8
+                (label :class {media_data.is_playing ? "media-status-pill playing" : "media-status-pill paused"}
+                       :text {media_data.is_playing ? "󰐊 Играет" : "󰏤 Пауза"})
+                (label :class "media-album-chip" :visible {media_data.album != ""} :limit-width 24 :text {media_data.album}))
+              (label :class "expanded-media-title" :halign "start" :wrap true :limit-width 36 :text {media_data.full_title})
+              (label :class "expanded-media-artist" :halign "start" :limit-width 36 :text {media_data.artist}))
+            ;; Scrubber
+            (box :orientation "v" :space-evenly false :spacing 3 :class "media-progress-box"
+              (scale :class "media-slider big-slider"
+                     :min 0 :max 100 :value {media_data.progress}
+                     :onchange "scripts/media.py --seek-pct {}")
+              (box :orientation "h" :space-evenly false
+                (label :class "media-time" :halign "start" :text {media_data.position_str})
+                (label :class "media-time" :hexpand true :halign "end" :text {media_data.length_str})))
+            ;; Perfectly circular control buttons!
+            (box :orientation "h" :space-evenly false :spacing 14 :halign "center" :valign "center" :class "media-ctrl-row"
+              (button :class "btn-circle" :onclick "scripts/media.py --rewind 10" :tooltip "-10 сек"
+                (label :text "󰕌" :halign "center" :valign "center"))
+              (button :class "btn-circle" :onclick "scripts/media.py --prev" :tooltip "Предыдущий трек"
+                (label :text "󰒮" :halign "center" :valign "center"))
+              (button :class "media-btn-play" :onclick "scripts/media.py --toggle" :tooltip "Воспроизведение / Пауза"
+                (label :text {media_data.status_icon} :halign "center" :valign "center"))
+              (button :class "btn-circle" :onclick "scripts/media.py --next" :tooltip "Следующий трек"
+                (label :text "󰒭" :halign "center" :valign "center"))
+              (button :class "btn-circle" :onclick "scripts/media.py --forward 10" :tooltip "+10 сек"
+                (label :text "󰕎" :halign "center" :valign "center")))))
 
-      ;; TAB 2: Expanded Media View
-      (box :orientation "v" :space-evenly false :spacing 12 :class "dash-view-box"
-      (box :class "card expanded-media-card m3-card" :orientation "h" :space-evenly false :spacing 20
-        (box :class "expanded-art-frame" :valign "center" :halign "center"
-          (image :path {media_data.cover_art != "" ? media_data.cover_art : "/home/fonera/.config/eww/assets/default_cover.png"}
-                 :image-width 140 :image-height 140 :class "expanded-art-img"))
-        (box :orientation "v" :space-evenly false :spacing 10 :hexpand true :valign "center"
-          (box :orientation "v" :space-evenly false :spacing 3
-            (label :class "expanded-media-title" :halign "start" :wrap true :text {media_data.full_title})
-            (label :class "expanded-media-artist" :halign "start" :text {media_data.artist})
-            (label :class "expanded-media-album" :halign "start" :visible {media_data.album != ""} :text {media_data.album}))
-          (box :orientation "v" :space-evenly false :spacing 4
-            (scale :class "media-slider big-slider"
-                   :min 0 :max 100 :value {media_data.progress}
-                   :onchange "scripts/media.py --seek-pct {}")
-            (box :orientation "h" :space-evenly false
-              (label :class "media-time" :halign "start" :text {media_data.position_str})
-              (label :class "media-time" :hexpand true :halign "end" :text {media_data.length_str})))
-          (box :orientation "h" :space-evenly false :spacing 14 :halign "start"
-            (button :class "media-btn btn-round" :onclick "scripts/media.py --rewind 10" :tooltip "-10 сек" "󰕌")
-            (button :class "media-btn btn-round" :onclick "scripts/media.py --prev" :tooltip "Предыдущий" "󰒮")
-            (button :class "media-btn media-btn-play btn-round-large" :onclick "scripts/media.py --toggle" :tooltip "Воспроизведение" {media_data.status_icon})
-            (button :class "media-btn btn-round" :onclick "scripts/media.py --next" :tooltip "Следующий" "󰒭")
-            (button :class "media-btn btn-round" :onclick "scripts/media.py --forward 10" :tooltip "+10 сек" "󰕎")))))
+        ;; Row 2: Media Audio Controls & Track Specs
+        (box :orientation "h" :space-evenly false :spacing 10
+          ;; Card 1: Audio Volume Control
+          (box :class "card m3-card" :orientation "v" :space-evenly false :spacing 8 :width 355
+            (box :orientation "h" :space-evenly false :spacing 6
+              (label :class "perf-icon" :text "󰕾")
+              (label :class "perf-name" :text "Уровень звука"))
+            (box :orientation "v" :space-evenly false :spacing 3
+              (box :orientation "h" :space-evenly false
+                (label :class "meter-label" :text "Громкость" :halign "start")
+                (label :class "meter-val" :hexpand true :halign "end" :text "${volume_data.volume}%"))
+              (scale :class "meter-slider vol-slider"
+                     :min 0 :max 100 :value {volume_data.volume}
+                     :onchange "amixer -D pulse set Master {}%"))
+            (box :orientation "h" :space-evenly true :spacing 6
+              (button :class "media-preset-btn" :onclick "pamixer -t" (label :text "󰝟 Мут"))
+              (button :class "media-preset-btn" :onclick "amixer -D pulse set Master 25%" (label :text "25%"))
+              (button :class "media-preset-btn" :onclick "amixer -D pulse set Master 50%" (label :text "50%"))
+              (button :class "media-preset-btn" :onclick "amixer -D pulse set Master 75%" (label :text "75%"))
+              (button :class "media-preset-btn" :onclick "amixer -D pulse set Master 100%" (label :text "100%"))))
 
-      ;; TAB 3: Expanded Performance View
-      (box :orientation "v" :space-evenly false :spacing 12 :class "dash-view-box"
-      (box :orientation "h" :space-evenly true :spacing 12
-        (box :class "card perf-card m3-card" :orientation "v" :space-evenly false :spacing 8
-          (box :orientation "h" :space-evenly false :spacing 8
-            (label :class "perf-icon" :text "")
-            (label :class "perf-name" :text "Процессор"))
-          (label :class "perf-large-stat" :text "${round(EWW_CPU.avg, 0)}%")
-          (progress :class "meter-bar cpu-bar" :value {round(EWW_CPU.avg, 0)})
-          (button :class "perf-action-btn" :onclick "~/.config/eww/scripts/btop.sh" "Запустить btop"))
-        (box :class "card perf-card m3-card" :orientation "v" :space-evenly false :spacing 8
-          (box :orientation "h" :space-evenly false :spacing 8
-            (label :class "perf-icon" :text "")
-            (label :class "perf-name" :text "ОЗУ"))
-          (label :class "perf-large-stat" :text "${round(EWW_RAM.used_mem_perc, 0)}%")
-          (progress :class "meter-bar ram-bar" :value {round(EWW_RAM.used_mem_perc, 0)})
-          (label :class "perf-sub-stat" :text "${round(EWW_RAM.used_mem / 1024 / 1024 / 1024, 1)} ГБ / ${round(EWW_RAM.total_mem / 1024 / 1024 / 1024, 1)} ГБ"))
-        (box :class "card perf-card m3-card" :orientation "v" :space-evenly false :spacing 8
-          (box :orientation "h" :space-evenly false :spacing 8
-            (label :class "perf-icon" :text "󰋊")
-            (label :class "perf-name" :text "Диск (/)"))
-          (label :class "perf-large-stat" :text "${round(EWW_DISK['/'].used_perc, 0)}%")
-          (progress :class "meter-bar disk-bar" :value {round(EWW_DISK['/'].used_perc, 0)})
-          (label :class "perf-sub-stat" :text "${round(EWW_DISK['/'].free / 1024 / 1024 / 1024, 1)} ГБ свободно")))))))
+          ;; Card 2: Media Track Details
+          (box :class "card m3-card" :orientation "v" :space-evenly false :spacing 6 :width 355
+            (box :orientation "h" :space-evenly false :spacing 6
+              (label :class "perf-icon" :text "󰎈")
+              (label :class "perf-name" :text "Параметры потока"))
+            (box :class "media-detail-item" :orientation "h" :space-evenly false
+              (label :class "detail-title" :text "Состояние:" :halign "start")
+              (label :class "detail-val" :hexpand true :halign "end" :text {media_data.is_playing ? "Воспроизведение" : "Остановлено"}))
+            (box :class "media-detail-item" :orientation "h" :space-evenly false
+              (label :class "detail-title" :text "Позиция:" :halign "start")
+              (label :class "detail-val" :hexpand true :halign "end" :text "${media_data.position_str} / ${media_data.length_str}"))
+            (box :class "media-detail-item" :orientation "h" :space-evenly false
+              (label :class "detail-title" :text "Альбом:" :halign "start")
+              (label :class "detail-val" :hexpand true :halign "end" :limit-width 22 :text {media_data.album != "" ? media_data.album : "Отсутствует"})))))
+
+      ;; TAB 3: Functional System Hub
+      (box :orientation "v" :space-evenly false :spacing 10 :class "dash-view-box"
+        ;; Row 1: System Metrics & Actions
+        (box :orientation "h" :space-evenly true :spacing 10
+          ;; Card 1: CPU, RAM & Swap
+          (box :class "card perf-card m3-card" :orientation "v" :space-evenly false :spacing 8
+            (box :orientation "h" :space-evenly false :spacing 6
+              (label :class "perf-icon" :text "")
+              (label :class "perf-name" :text "ЦП и Память"))
+            (box :orientation "v" :space-evenly false :spacing 2
+              (box :orientation "h" :space-evenly false
+                (label :class "meter-label" :text "CPU Load" :halign "start")
+                (label :class "meter-val" :hexpand true :halign "end" :text "${round(EWW_CPU.avg, 0)}%"))
+              (progress :class "meter-bar cpu-bar" :value {round(EWW_CPU.avg, 0)}))
+            (box :orientation "v" :space-evenly false :spacing 2
+              (box :orientation "h" :space-evenly false
+                (label :class "meter-label" :text "RAM" :halign "start")
+                (label :class "meter-val" :hexpand true :halign "end" :text "${round(EWW_RAM.used_mem_perc, 0)}%"))
+              (progress :class "meter-bar ram-bar" :value {round(EWW_RAM.used_mem_perc, 0)})
+              (label :class "perf-sub-stat" :halign "start" :text "${round(EWW_RAM.used_mem / 1024 / 1024 / 1024, 1)} ГБ / ${round(EWW_RAM.total_mem / 1024 / 1024 / 1024, 1)} ГБ"))
+            (box :orientation "v" :space-evenly false :spacing 2
+              (box :orientation "h" :space-evenly false
+                (label :class "meter-label" :text "Swap" :halign "start")
+                (label :class "meter-val" :hexpand true :halign "end" :text "${round((EWW_RAM.total_swap - EWW_RAM.free_swap) / 1024 / 1024 / 1024, 1)} ГБ"))
+              (progress :class "meter-bar ram-bar" :value {EWW_RAM.total_swap > 0 ? round(((EWW_RAM.total_swap - EWW_RAM.free_swap) / EWW_RAM.total_swap) * 100, 0) : 0})))
+
+          ;; Card 2: Disk Mounts
+          (box :class "card perf-card m3-card" :orientation "v" :space-evenly false :spacing 8
+            (box :orientation "h" :space-evenly false :spacing 6
+              (label :class "perf-icon" :text "󰋊")
+              (label :class "perf-name" :text "Накопители"))
+            (box :orientation "v" :space-evenly false :spacing 2
+              (box :orientation "h" :space-evenly false
+                (label :class "meter-label" :text "/ (Root NVMe)" :halign "start")
+                (label :class "meter-val" :hexpand true :halign "end" :text "${round(EWW_DISK['/'].used_perc, 0)}%"))
+              (progress :class "meter-bar disk-bar" :value {round(EWW_DISK['/'].used_perc, 0)})
+              (label :class "perf-sub-stat" :halign "start" :text "${round(EWW_DISK['/'].free / 1024 / 1024 / 1024, 1)} ГБ свободно"))
+            (box :orientation "v" :space-evenly false :spacing 2
+              (box :orientation "h" :space-evenly false
+                (label :class "meter-label" :text "/mnt/fonera" :halign "start")
+                (label :class "meter-val" :hexpand true :halign "end" :text "${round(EWW_DISK['/mnt/fonera'].used_perc, 0)}%"))
+              (progress :class "meter-bar disk-bar" :value {round(EWW_DISK['/mnt/fonera'].used_perc, 0)})
+              (label :class "perf-sub-stat" :halign "start" :text "${round(EWW_DISK['/mnt/fonera'].free / 1024 / 1024 / 1024, 1)} ГБ свободно")))
+
+          ;; Card 3: System Management
+          (box :class "card perf-card m3-card" :orientation "v" :space-evenly false :spacing 8
+            (box :orientation "h" :space-evenly false :spacing 6
+              (label :class "perf-icon" :text "󰒓")
+              (label :class "perf-name" :text "Управление"))
+            (button :class "perf-action-btn" :onclick "~/.config/eww/scripts/btop.sh"
+              (box :orientation "h" :space-evenly false :spacing 8 :halign "center"
+                (label :text "󰓅") (label :text "Системный btop")))
+            (button :class "perf-action-btn" :onclick "~/.config/system-control-center/launch.sh & eww close dashboard"
+              (box :orientation "h" :space-evenly false :spacing 8 :halign "center"
+                (label :text "󰒓") (label :text "Параметры системы")))
+            (button :class "perf-action-btn" :onclick "i3-msg restart & eww close dashboard"
+              (box :orientation "h" :space-evenly false :spacing 8 :halign "center"
+                (label :text "") (label :text "Перезапуск i3")))
+            (button :class "perf-action-btn" :onclick "eww reload"
+              (box :orientation "h" :space-evenly false :spacing 8 :halign "center"
+                (label :text "󰑐") (label :text "Перезагрузка EWW")))))
+
+        ;; Row 2: Host Details & Power Actions
+        (box :orientation "h" :space-evenly false :spacing 10
+          ;; Card 4: Host Details
+          (box :class "card m3-card" :orientation "v" :space-evenly false :spacing 6 :width 355
+            (box :orientation "h" :space-evenly false :spacing 6
+              (label :class "perf-icon" :text "󰌢")
+              (label :class "perf-name" :text "Спецификация системы"))
+            (box :class "media-detail-item" :orientation "h" :space-evenly false
+              (label :class "detail-title" :text "Дистрибутив:" :halign "start")
+              (label :class "detail-val" :hexpand true :halign "end" :text "Arch Linux (Rolling)"))
+            (box :class "media-detail-item" :orientation "h" :space-evenly false
+              (label :class "detail-title" :text "Оконный менеджер:" :halign "start")
+              (label :class "detail-val" :hexpand true :halign "end" :text "i3wm v4.24"))
+            (box :class "media-detail-item" :orientation "h" :space-evenly false
+              (label :class "detail-title" :text "Версия ядра:" :halign "start")
+              (label :class "detail-val" :hexpand true :halign "end" :text {profile_data.kernel}))
+            (box :class "media-detail-item" :orientation "h" :space-evenly false
+              (label :class "detail-title" :text "Аптайм машины:" :halign "start")
+              (label :class "detail-val" :hexpand true :halign "end" :text {profile_data.uptime})))
+
+          ;; Card 5: Fast Power Controls
+          (box :class "card m3-card" :orientation "v" :space-evenly false :spacing 8 :width 355
+            (box :orientation "h" :space-evenly false :spacing 6
+              (label :class "perf-icon" :text "")
+              (label :class "perf-name" :text "Управление питанием"))
+            (box :orientation "h" :space-evenly true :spacing 6
+              (button :class "perf-action-btn" :onclick "betterlockscreen -l blur & eww close dashboard"
+                (box :orientation "h" :space-evenly false :spacing 4 :halign "center"
+                  (label :text "") (label :text "Блок")))
+              (button :class "perf-action-btn" :onclick "eww close dashboard && systemctl suspend"
+                (box :orientation "h" :space-evenly false :spacing 4 :halign "center"
+                  (label :text "󰒲") (label :text "Сон"))))
+            (box :orientation "h" :space-evenly true :spacing 6
+              (button :class "perf-action-btn" :onclick "systemctl reboot"
+                (box :orientation "h" :space-evenly false :spacing 4 :halign "center"
+                  (label :text "") (label :text "Ребут")))
+              (button :class "perf-action-btn" :onclick "systemctl poweroff"
+                (box :orientation "h" :space-evenly false :spacing 4 :halign "center"
+                  (label :text "") (label :text "Выкл"))))))))))
 
 ;; Power Menu Popup
 (defwidget powermenu_layout []

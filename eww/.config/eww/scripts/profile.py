@@ -2,7 +2,8 @@
 import os
 import json
 import time
-import pwd
+import socket
+import platform
 from pathlib import Path
 
 GREETINGS_FILE = os.path.expanduser('~/.config/eww/greetings.json')
@@ -26,7 +27,6 @@ def get_uptime_str():
 def get_profile_data():
     current_user = os.environ.get("USER", "fonera")
     
-    # Load custom greetings config
     cfg = {}
     if os.path.exists(GREETINGS_FILE):
         try:
@@ -36,6 +36,7 @@ def get_profile_data():
             pass
 
     display_name = cfg.get("user_name") or current_user
+    title = f"Привет, {display_name}!"
     custom_msg = cfg.get("custom_message", "").strip()
 
     # Determine time of day
@@ -52,12 +53,13 @@ def get_profile_data():
     if custom_msg:
         greeting = custom_msg.replace("{user}", display_name)
     else:
-        messages = cfg.get("messages", {}).get(period, [f"Привет, {display_name}!"])
-        if not messages:
-            messages = [f"Привет, {display_name}!"]
-        # Stable pick per minute/hour or cyclic
-        idx = (int(time.time() // 120)) % len(messages)
-        greeting = messages[idx].replace("{user}", display_name)
+        messages = cfg.get("messages", {}).get(period, ["Всё работает как часы!"])
+        # Filter out anything that repeats title
+        valid_msgs = [m.replace("{user}", display_name) for m in messages if m.replace("{user}", display_name) != title]
+        if not valid_msgs:
+            valid_msgs = ["Всё работает как часы!"]
+        idx = (int(time.time() // 120)) % len(valid_msgs)
+        greeting = valid_msgs[idx]
 
     # Avatar path check
     avatar_path = ""
@@ -70,14 +72,23 @@ def get_profile_data():
             avatar_path = candidate
             break
 
+    # Short kernel
+    k_rel = platform.release()
+    if '-' in k_rel:
+        k_short = k_rel.split('-')[0]
+    else:
+        k_short = k_rel[:6]
+
     return {
         "user": display_name,
-        "title": f"Привет, {display_name}!",
+        "title": title,
         "greeting": greeting,
         "avatar_path": avatar_path,
         "uptime": get_uptime_str(),
         "os": "Arch Linux",
-        "wm": "i3wm"
+        "wm": "i3wm",
+        "kernel": k_short,
+        "host": socket.gethostname()
     }
 
 if __name__ == "__main__":
