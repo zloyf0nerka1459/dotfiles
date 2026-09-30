@@ -107,7 +107,7 @@ def get_fallback(city='Новосибирск'):
 
 def decode_wmo(code, is_day):
     if code == 0:
-        return ('' if is_day else '', 'Ясно')
+        return ('' if is_day else '', 'Ясно')
     elif code in (1, 2):
         return ('', 'Переменная облачность')
     elif code == 3:
